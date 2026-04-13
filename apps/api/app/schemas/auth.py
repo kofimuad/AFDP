@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
@@ -11,6 +12,12 @@ class UserResponse(BaseModel):
     full_name: str
     role: str
     vendor_id: str | None = None
+    created_at: datetime | None = None
+    profile_image_url: str | None = None
+
+
+class UserUpdateRequest(BaseModel):
+    full_name: str | None = Field(default=None, min_length=2, max_length=100)
 
 
 class UserRegisterRequest(BaseModel):

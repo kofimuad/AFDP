@@ -8,6 +8,7 @@ import { FormEvent, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/ui/Logo";
 import { useAuthStore } from "@/lib/store/authStore";
+import { registerUser, loginUser, getMe } from '@/lib/api'
 
 type FormState = {
   fullName: string;
@@ -25,9 +26,11 @@ const INITIAL_FORM: FormState = {
 
 export default function AuthPage() {
   const router = useRouter();
-  const { mode, setMode, user, signIn, signUp } = useAuthStore();
+  const { setAuth } = useAuthStore();
+  const [mode, setMode] = useState<'signup' | 'signin'>('signup');
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -35,7 +38,7 @@ export default function AuthPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
@@ -53,15 +56,63 @@ export default function AuthPage() {
         setError("Passwords do not match.");
         return;
       }
-      signUp(form.fullName.trim(), form.email.trim());
+      try {
+        setIsLoading(true);
+        const res = await registerUser({
+          email: form.email.trim(),
+          full_name: form.fullName.trim(),
+          password: form.password
+        });
+        setAuth(res.user, res.access_token, res.refresh_token);
+        // Always fetch latest user profile after auth
+        try {
+          const me = await getMe();
+          setAuth(me, res.access_token, res.refresh_token);
+        } catch {}
+        if (res.user.role === 'admin') {
+          router.push('/admin');
+        } else if (res.user.role === 'vendor') {
+          router.push('/dashboard');
+        } else {
+          router.push('/search');
+        }
+      } catch (err: any) {
+        const msg = err.response?.data?.detail || 'Registration failed';
+        setError(msg);
+      } finally {
+        setIsLoading(false);
+      }
     } else {
-      signIn(form.email.trim());
-      router.push("/dashboard");
+      try {
+        setIsLoading(true);
+        const res = await loginUser({
+          email: form.email.trim(),
+          password: form.password
+        });
+        setAuth(res.user, res.access_token, res.refresh_token);
+        // Always fetch latest user profile after auth
+        try {
+          const me = await getMe();
+          setAuth(me, res.access_token, res.refresh_token);
+        } catch {}
+        if (res.user.role === 'admin') {
+          router.push('/admin');
+        } else if (res.user.role === 'vendor') {
+          router.push('/dashboard');
+        } else {
+          router.push('/search');
+        }
+      } catch (err: any) {
+        const status = err.response?.status;
+        if (status === 401) {
+          setError('Invalid email or password');
+        } else {
+          setError('Something went wrong. Please try again.');
+        }
+      } finally {
+        setIsLoading(false);
+      }
     }
-
-    setForm(INITIAL_FORM);
-    setShowPassword(false);
-    setShowConfirmPassword(false);
   };
 
   return (
@@ -160,13 +211,24 @@ export default function AuthPage() {
           <button
             type="submit"
             className="w-full rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-inverse)] hover:bg-[var(--color-primary-hover)]"
+            disabled={isLoading}
           >
-            {mode === "signup" ? "Create Account" : "Sign In"}
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin" width="16" height="16" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                {mode === 'signup' ? 'Creating account...' : 'Signing in...'}
+              </span>
+            ) : (
+              mode === 'signup' ? 'Create Account' : 'Sign In'
+            )}
           </button>
         </form>
 
-        {error ? <p className="mt-4 text-sm text-[var(--color-primary)]">{error}</p> : null}
-        {user ? <p className="mt-4 text-sm text-[var(--color-grocery)]">Signed in as {user.email}</p> : null}
+        {error && (
+          <div className="text-red-500 text-sm mt-2 p-3 bg-red-50 rounded-lg border border-red-200">
+            {error}
+          </div>
+        )}
       </section>
     </main>
   );

@@ -1,17 +1,23 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Map, { Marker } from "react-map-gl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { registerVendor } from "@/lib/api";
+import { registerVendorWithAuth } from "@/lib/api";
+import { useAuthStore } from "@/lib/store/authStore";
 import type { RegisterVendorPayload, VendorType } from "@/types";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const DC_FALLBACK = { lat: 38.9072, lng: -77.0369 };
 
 interface FormState {
+  fullName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
   name: string;
   type: VendorType;
   address: string;
@@ -21,6 +27,10 @@ interface FormState {
 }
 
 const INITIAL_FORM: FormState = {
+  fullName: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
   name: "",
   type: "restaurant",
   address: "",
@@ -30,7 +40,11 @@ const INITIAL_FORM: FormState = {
 };
 
 export default function RegisterVendorPage() {
+  const router = useRouter();
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { setAuth } = useAuthStore();
   const [latitude, setLatitude] = useState<number>(DC_FALLBACK.lat);
   const [longitude, setLongitude] = useState<number>(DC_FALLBACK.lng);
   const [hasMarker, setHasMarker] = useState(false);
@@ -82,24 +96,37 @@ export default function RegisterVendorPage() {
       setIsSubmitting(false);
       return;
     }
-
+    if (!form.fullName.trim() || !form.email.trim() || !form.password) {
+      setErrorMessage("Full name, email, and password are required.");
+      setIsSubmitting(false);
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      setIsSubmitting(false);
+      return;
+    }
     try {
-      const payload: RegisterVendorPayload = {
-        name: form.name.trim(),
-        type: form.type,
+      const payload = {
+        email: form.email.trim(),
+        full_name: form.fullName.trim(),
+        password: form.password,
+        business_name: form.name.trim(),
+        business_type: form.type,
         address: form.address.trim(),
         lat: latitude,
         lng: longitude,
-        phone: form.phone.trim() || null,
-        website: form.website.trim() || null,
-        image_url: form.image_url.trim() || null
+        phone: form.phone.trim() || undefined,
+        website: form.website.trim() || undefined,
       };
-
-      const created = await registerVendor(payload);
-      setSuccessMessage(`Registration submitted for ${created.name}.`);
+      const res = await registerVendorWithAuth(payload);
+      setAuth(res.user, res.access_token, res.refresh_token);
+      setSuccessMessage(`Registration submitted for ${res.user.email}. Redirecting to dashboard...`);
       setForm(INITIAL_FORM);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to register vendor.");
+      setTimeout(() => router.push('/dashboard'), 1200);
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || 'Registration failed';
+      setErrorMessage(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -112,6 +139,54 @@ export default function RegisterVendorPage() {
         <p className="mt-2 text-sm text-[var(--color-text-muted)]">Submit your restaurant or grocery store to appear in African food discovery results.</p>
 
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+          <h2 className="text-lg font-semibold mb-2">Create Your Vendor Account</h2>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">Full name</span>
+            <Input value={form.fullName} onChange={(e) => updateField("fullName", e.target.value)} required />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">Email</span>
+            <Input type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} required />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">Password</span>
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={(e) => updateField("password", e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 border-0 bg-transparent p-0 text-gray-400 hover:text-gray-600"
+                aria-label="Toggle password visibility"
+              >
+                {showPassword ? <span>🙈</span> : <span>👁️</span>}
+              </button>
+            </div>
+          </label>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">Confirm password</span>
+            <div className="relative">
+              <Input
+                type={showConfirmPassword ? "text" : "password"}
+                value={form.confirmPassword}
+                onChange={(e) => updateField("confirmPassword", e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 border-0 bg-transparent p-0 text-gray-400 hover:text-gray-600"
+                aria-label="Toggle confirm password visibility"
+              >
+                {showConfirmPassword ? <span>🙈</span> : <span>👁️</span>}
+              </button>
+            </div>
+          </label>
+          <h2 className="text-lg font-semibold mt-6 mb-2">Your Business Details</h2>
           <label className="block space-y-1">
             <span className="text-sm font-medium text-[var(--color-text-primary)]">Business name</span>
             <Input value={form.name} onChange={(e) => updateField("name", e.target.value)} required />

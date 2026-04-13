@@ -9,6 +9,7 @@ import "./globals.css";
 
 import { Logo } from "@/components/ui/Logo";
 import { NavBar } from "@/components/ui/NavBar";
+import { ToastContainer } from "@/components/ui/Toast";
 
 import { Providers } from "./providers";
 
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Providers>
             <NavBar />
             <main>{children}</main>
+            <ToastContainer />
 
             <footer className="border-t border-white/10 bg-[#0F0E0D] px-4 py-10 text-white">
               <div className="mx-auto w-full max-w-7xl">

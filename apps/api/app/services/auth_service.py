@@ -73,7 +73,7 @@ async def get_current_user(
 
     user_row = await fetchrow(
         """
-        SELECT id, email, full_name, role, vendor_id, is_active
+        SELECT id, email, full_name, role, vendor_id, is_active, created_at, profile_image_url
         FROM users
         WHERE id = $1;
         """,
@@ -91,6 +91,8 @@ async def get_current_user(
         "role": user_row["role"],
         "vendor_id": str(user_row["vendor_id"]) if user_row["vendor_id"] else None,
         "is_active": user_row["is_active"],
+        "created_at": user_row["created_at"],
+        "profile_image_url": user_row["profile_image_url"],
     }
 
 async def require_vendor(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:

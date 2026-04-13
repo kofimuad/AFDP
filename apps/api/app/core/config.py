@@ -1,6 +1,5 @@
 from functools import lru_cache
-
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,8 +12,8 @@ class Settings(BaseSettings):
     app_debug: bool = True
     app_host: str = "0.0.0.0"
     app_port: int = 8000
-    cors_origins: str = "http://localhost:3000"
 
+    cors_origins: str = "http://localhost:3000"
     api_v1_prefix: str = "/api/v1"
 
     database_url: str = "postgresql://postgres@localhost:5432/afdp"
@@ -23,12 +22,17 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://localhost:6379/0"
     search_cache_ttl_seconds: int = 300
+
     admin_api_key: str = ""
 
-    jwt_secret_key: str = ""
-    jwt_algorithm: str = "HS256"
-    jwt_access_token_expire_minutes: int = 15
-    jwt_refresh_token_expire_days: int = 7
+    jwt_secret_key: str = Field(default="", env="JWT_SECRET_KEY")
+    jwt_algorithm: str = Field(default="HS256", env="JWT_ALGORITHM")
+    jwt_access_token_expire_minutes: int = Field(
+        default=15, env="JWT_ACCESS_TOKEN_EXPIRE_MINUTES"
+    )
+    jwt_refresh_token_expire_days: int = Field(
+        default=7, env="JWT_REFRESH_TOKEN_EXPIRE_DAYS"
+    )
 
     mapbox_access_token: str = ""
     neon_database_url: str = ""
@@ -37,7 +41,11 @@ class Settings(BaseSettings):
     cloudinary_api_key: str = ""
     cloudinary_api_secret: str = ""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -48,5 +56,4 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Return cached settings singleton."""
-
     return Settings()

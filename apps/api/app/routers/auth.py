@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from uuid import UUID
+from pathlib import Path
+from uuid import UUID, uuid4
 
 import asyncpg
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from app.core.database import fetchrow
 from app.schemas.auth import (
@@ -14,6 +15,7 @@ from app.schemas.auth import (
     TokenResponse,
     UserRegisterRequest,
     UserResponse,
+    UserUpdateRequest,
     VendorRegisterRequest,
 )
 from app.schemas.vendor import VendorRegisterIn
@@ -29,10 +31,19 @@ from app.services.vendor_service import register_vendor
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
+ALLOWED_IMAGE_TYPES = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
+UPLOAD_DIR = Path("/app/uploads/profiles")
+UPLOAD_URL_PREFIX = "/uploads/profiles"
+
 async def _get_user_by_email(email: str) -> asyncpg.Record | None:
     return await fetchrow(
         """
-        SELECT id, email, full_name, hashed_password, role, vendor_id, is_active
+        SELECT id, email, full_name, hashed_password, role, vendor_id, is_active, created_at
         FROM users
         WHERE email = $1;
         """,
@@ -40,12 +51,18 @@ async def _get_user_by_email(email: str) -> asyncpg.Record | None:
     )
 
 def _to_user_response(row: asyncpg.Record) -> UserResponse:
+    """Convert a users row into the public UserResponse payload."""
+    keys = row.keys()
+    created_at = row["created_at"] if "created_at" in keys else None
+    profile_image_url = row["profile_image_url"] if "profile_image_url" in keys else None
     return UserResponse(
         id=str(row["id"]),
         email=row["email"],
         full_name=row["full_name"],
         role=row["role"],
         vendor_id=str(row["vendor_id"]) if row["vendor_id"] else None,
+        created_at=created_at,
+        profile_image_url=profile_image_url,
     )
 
 @router.post("/register", response_model=TokenResponse)
@@ -58,7 +75,7 @@ async def register_user(payload: UserRegisterRequest) -> TokenResponse:
         """
         INSERT INTO users (email, full_name, hashed_password, role, is_active)
         VALUES ($1, $2, $3, 'user', true)
-        RETURNING id, email, full_name, role, vendor_id;
+        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url;
         """,
         payload.email.lower(),
         payload.full_name.strip(),
@@ -93,12 +110,12 @@ async def register_vendor_user(payload: VendorRegisterRequest) -> TokenResponse:
         """
         INSERT INTO users (email, full_name, hashed_password, role, vendor_id, is_active)
         VALUES ($1, $2, $3, 'vendor', $4::uuid, true)
-        RETURNING id, email, full_name, role, vendor_id;
+        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url;
         """,
         payload.email.lower(),
         payload.full_name.strip(),
         hash_password(payload.password),
-        UUID(vendor["id"]),
+        str(vendor["id"]),
     )
     assert user is not None
 
@@ -140,13 +157,82 @@ async def refresh_token(payload: RefreshRequest) -> dict[str, str]:
 
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: dict = Depends(get_current_user)) -> UserResponse:
+    """Return the authenticated user's profile, including created_at and photo."""
     return UserResponse(
         id=current_user["id"],
         email=current_user["email"],
         full_name=current_user["full_name"],
         role=current_user["role"],
         vendor_id=current_user["vendor_id"],
+        created_at=current_user.get("created_at"),
+        profile_image_url=current_user.get("profile_image_url"),
     )
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_me(
+    payload: UserUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+) -> UserResponse:
+    """Update the authenticated user's editable profile fields (full_name)."""
+    if payload.full_name is None:
+        return await me(current_user)
+
+    updated = await fetchrow(
+        """
+        UPDATE users
+        SET full_name = $1
+        WHERE id = $2
+        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url;
+        """,
+        payload.full_name.strip(),
+        UUID(current_user["id"]),
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return _to_user_response(updated)
+
+@router.post("/me/photo", response_model=UserResponse)
+async def upload_profile_photo(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+) -> UserResponse:
+    """Upload a profile photo for the authenticated user.
+
+    Accepts JPEG, PNG, or WebP up to 5MB. Stores the file on disk and updates
+    the user's profile_image_url to a relative URL served by the /uploads mount.
+    """
+    content_type = (file.content_type or "").lower()
+    if content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=415, detail="Unsupported image type")
+
+    contents = await file.read()
+    if len(contents) == 0:
+        raise HTTPException(status_code=400, detail="Empty file")
+    if len(contents) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="Image must be 5MB or smaller")
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    extension = ALLOWED_IMAGE_TYPES[content_type]
+    filename = f"{uuid4().hex}{extension}"
+    destination = UPLOAD_DIR / filename
+    destination.write_bytes(contents)
+
+    url = f"{UPLOAD_URL_PREFIX}/{filename}"
+    updated = await fetchrow(
+        """
+        UPDATE users
+        SET profile_image_url = $1
+        WHERE id = $2
+        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url;
+        """,
+        url,
+        UUID(current_user["id"]),
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return _to_user_response(updated)
+
 
 @router.post("/logout")
 async def logout() -> dict[str, str]:

@@ -105,7 +105,7 @@ export function MapView({ vendors, onVendorClick }: MapViewProps) {
             closeOnClick={false}
           >
             <div className="max-w-[240px] space-y-2">
-              <p className="display-font text-base text-[var(--color-text-primary)]">{selectedVendor.name}</p>
+              <p className="display-font text-base" style={{ color: resolvedTheme === 'dark' ? '#222' : 'var(--color-text-primary)' }}>{selectedVendor.name}</p>
               <p className="text-xs capitalize text-[var(--color-text-muted)]">{selectedVendor.type.replace("_", " ")}</p>
               <p className="text-xs text-[var(--color-text-muted)]">{selectedVendor.address}</p>
               {selectedVendor.distance_km != null ? <p className="text-xs text-[var(--color-text-muted)]">{selectedVendor.distance_km.toFixed(1)} km away</p> : null}

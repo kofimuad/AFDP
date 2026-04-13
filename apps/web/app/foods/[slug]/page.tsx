@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { FoodDetail } from "@/components/food/FoodDetail";
-import { MapView } from "@/components/map/MapView";
+import { FoodDetailMap } from "@/components/food/FoodDetailMap.client";
 import { getFood } from "@/lib/api";
 
 interface FoodDetailPageProps {
@@ -19,7 +19,7 @@ export default async function FoodDetailPage({ params }: FoodDetailPageProps) {
     <main className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-8 pt-20 md:px-6">
       <FoodDetail food={food} />
       <section>
-        <MapView vendors={food.restaurants} />
+        <FoodDetailMap vendors={food.restaurants} />
       </section>
     </main>
   );
