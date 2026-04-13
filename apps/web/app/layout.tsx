@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <Providers>
             <NavBar />
-            <main className="flex-1 flex flex-col">{children}</main>
+            <main className="flex-1 flex flex-col pt-16">{children}</main>
             <ToastContainer />
 
             <footer className="border-t border-white/10 bg-[#0F0E0D] px-4 py-10 text-white mt-auto">
