@@ -32,15 +32,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${inter.variable}`} suppressHydrationWarning>
-      <body>
+    <html lang="en" className={`${fraunces.variable} ${inter.variable} min-h-full flex flex-col`} suppressHydrationWarning>
+      <body className="min-h-screen flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <Providers>
             <NavBar />
-            <main>{children}</main>
+            <main className="flex-1 flex flex-col">{children}</main>
             <ToastContainer />
 
-            <footer className="border-t border-white/10 bg-[#0F0E0D] px-4 py-10 text-white">
+            <footer className="border-t border-white/10 bg-[#0F0E0D] px-4 py-10 text-white mt-auto">
               <div className="mx-auto w-full max-w-7xl">
                 <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
                   <section>
