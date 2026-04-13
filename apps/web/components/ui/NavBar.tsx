@@ -26,7 +26,8 @@ export function NavBar() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const isAuthenticated = !!accessToken && !!user;
-  const isVendor = user?.role === "vendor" || user?.role === "admin";
+  const isVendor = user?.role === "vendor";
+  const isAdmin = user?.role === "admin";
 
   const menuRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -162,7 +163,7 @@ export function NavBar() {
                           avatarInitials
                         )}
                       </span>
-                      {isVendor && (
+                      {(isVendor || isAdmin) && (
                         <span
                           className={cn(
                             "ml-1 text-sm font-semibold",
@@ -192,9 +193,9 @@ export function NavBar() {
                             <User size={16} />
                             My Profile
                           </Link>
-                          {isVendor && (
+                          {(isVendor || isAdmin) && (
                             <Link
-                              href="/dashboard"
+                              href={isAdmin ? "/admin" : "/dashboard"}
                               onClick={closeMenus}
                               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]"
                             >
@@ -302,9 +303,9 @@ export function NavBar() {
                       <User size={16} />
                       My Profile
                     </Link>
-                    {isVendor && (
+                    {(isVendor || isAdmin) && (
                       <Link
-                        href="/dashboard"
+                        href={isAdmin ? "/admin" : "/dashboard"}
                         onClick={closeMenus}
                         className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]"
                       >
