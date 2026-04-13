@@ -1,0 +1,107 @@
+@import "mapbox-gl/dist/mapbox-gl.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Backgrounds */
+  --color-bg: #fafaf8;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f5f2ee;
+
+  /* Dark contrast */
+  --color-dark: #0f0e0d;
+  --color-dark-secondary: #2a2622;
+
+  /* Primary accent — deep terracotta */
+  --color-primary: #c8522a;
+  --color-primary-hover: #a8401e;
+  --color-primary-light: #f5e6df;
+
+  /* Category colors */
+  --color-restaurant: #c8522a;
+  --color-grocery: #2a7a4b;
+  --color-grocery-light: #e0f0e8;
+
+  /* Text */
+  --color-text-primary: #0f0e0d;
+  --color-text-muted: #6b6560;
+  --color-text-inverse: #fafaf8;
+
+  /* Borders */
+  --color-border: #e8e4df;
+  --color-border-strong: #d0cac3;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(15, 14, 13, 0.08);
+  --shadow-md: 0 4px 16px rgba(15, 14, 13, 0.1);
+  --shadow-lg: 0 8px 32px rgba(15, 14, 13, 0.14);
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Border radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+.dark {
+  --color-bg: #0f0e0d;
+  --color-surface: #1a1917;
+  --color-surface-hover: #242220;
+  --color-dark: #fafaf8;
+  --color-text-primary: #f5f5f4;
+  --color-text-muted: #9ca3af;
+  --color-border: #2a2826;
+  --color-border-strong: #3a3835;
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--color-border);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.display-font {
+  font-family: var(--font-display);
+}
+
+.pattern-overlay {
+  background-image:
+    linear-gradient(to right, rgba(200, 82, 42, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(200, 82, 42, 0.06) 1px, transparent 1px);
+  background-size: 36px 36px;
+}

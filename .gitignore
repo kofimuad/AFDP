@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.production
+apps/web/.env.local
+
+# Node
+node_modules/
+.next/
+apps/web/.next/
+apps/web/node_modules/
+
+# Docker
+docker-compose.override.yml
+
+# Database
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Uploads / media
+uploads/
+media/
+
+# Alembic (keep versions, ignore pyc)
+migrations/versions/__pycache__/

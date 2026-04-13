@@ -1,0 +1,115 @@
+from __future__ import annotations
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.core.config import get_settings
+from app.core.database import close_db_pool, init_db_pool
+from app.core.redis import close_redis, init_redis
+from app.routers import admin, foods, health, ingredients, search, vendors
+
+settings = get_settings()
+
+app = FastAPI(
+    title="AFDP API",
+    version=settings.app_version,
+    description="African Food Discovery Platform API",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_tags=[
+        {"name": "Search", "description": "Food and vendor discovery endpoints."},
+        {"name": "Vendors", "description": "Vendor discovery and onboarding endpoints."},
+        {"name": "Foods", "description": "Food catalog endpoints."},
+        {"name": "Ingredients", "description": "Ingredient catalog endpoints."},
+        {"name": "Admin", "description": "Administrative moderation endpoints."},
+        {"name": "Health", "description": "Infrastructure health checks."},
+    ],
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",")],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+def _validation_detail(errors: list[dict]) -> str:
+    """Convert validation errors into a human readable message."""
+
+    messages: list[str] = []
+    for error in errors:
+        location = ".".join(str(part) for part in error.get("loc", []))
+        message = error.get("msg", "Invalid input")
+        if location:
+            messages.append(f"{location}: {message}")
+        else:
+            messages.append(message)
+    return "; ".join(messages)
+
+
+@app.on_event("startup")
+async def on_startup() -> None:
+    try:
+        await init_db_pool()
+    except Exception:
+        pass
+
+    try:
+        await init_redis()
+    except Exception:
+        pass
+
+
+@app.on_event("shutdown")
+async def on_shutdown() -> None:
+    try:
+        await close_db_pool()
+    except Exception:
+        pass
+
+    try:
+        await close_redis()
+    except Exception:
+        pass
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(_: Request, exc: StarletteHTTPException) -> JSONResponse:
+    error_code = "http_error"
+    if exc.status_code == 404:
+        error_code = "not_found"
+    elif exc.status_code == 401:
+        error_code = "unauthorized"
+    elif exc.status_code == 422:
+        error_code = "validation_error"
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": error_code, "detail": str(exc.detail)},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={"error": "validation_error", "detail": _validation_detail(exc.errors())},
+    )
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(_: Request, __: Exception) -> JSONResponse:
+    return JSONResponse(status_code=500, content={"error": "internal_error", "detail": "An unexpected error occurred"})
+
+
+app.include_router(search.router, prefix=settings.api_v1_prefix)
+app.include_router(vendors.router, prefix=settings.api_v1_prefix)
+app.include_router(foods.router, prefix=settings.api_v1_prefix)
+app.include_router(ingredients.router, prefix=settings.api_v1_prefix)
+app.include_router(admin.router, prefix=settings.api_v1_prefix)
+app.include_router(health.router, prefix=settings.api_v1_prefix)
