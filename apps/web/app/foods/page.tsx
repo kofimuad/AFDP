@@ -35,9 +35,18 @@ export default async function FoodsPage() {
                 key={food.id}
                 className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-sm)]"
               >
-                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)] text-lg font-semibold text-[var(--color-text-inverse)]">
-                  {food.name.charAt(0).toUpperCase()}
-                </div>
+                {food.image_url ? (
+                  <img
+                    src={food.image_url}
+                    alt={food.name}
+                    className="mb-4 h-24 w-full object-cover rounded-[var(--radius-md)]"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)] text-lg font-semibold text-[var(--color-text-inverse)]">
+                    {food.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <h2 className="display-font text-2xl text-[var(--color-text-primary)]">{food.name}</h2>
                 <p className="mt-2 line-clamp-2 text-sm text-[var(--color-text-muted)]">{food.description ?? "Traditional flavors and stories on every plate."}</p>
                 <Link href={`/foods/${food.slug}`} className="mt-4 inline-block text-sm font-semibold text-[var(--color-primary)] hover:text-[var(--color-primary-hover)]">

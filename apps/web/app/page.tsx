@@ -25,7 +25,16 @@ export default async function HomePage() {
               href={`/foods/${food.slug}`}
               className="min-w-[260px] rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-sm)]"
             >
-              <div className="mb-3 h-36 rounded-[var(--radius-md)] bg-[var(--color-surface-hover)]" />
+              {food.image_url ? (
+                <img
+                  src={food.image_url}
+                  alt={food.name}
+                  className="mb-3 h-36 w-full object-cover rounded-[var(--radius-md)]"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="mb-3 h-36 rounded-[var(--radius-md)] bg-[var(--color-surface-hover)]" />
+              )}
               <p className="display-font text-xl text-[var(--color-text-primary)]">{food.name}</p>
               <p className="mt-1 line-clamp-2 text-sm text-[var(--color-text-muted)]">{food.description ?? "Traditional and modern flavors."}</p>
             </Link>
