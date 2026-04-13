@@ -355,6 +355,108 @@ async def add_vendor_item(vendor_id: UUID, payload: VendorItemCreate) -> dict[st
     }
 
 
+async def find_or_create_food(
+    name: str,
+    description: str | None = None,
+    image_url: str | None = None,
+) -> dict[str, Any]:
+    """Look up a food by case-insensitive name; create it if missing."""
+
+    existing = await fetchrow(
+        "SELECT id, name, slug, description, image_url, created_at FROM foods WHERE lower(name) = lower($1) LIMIT 1;",
+        name.strip(),
+    )
+    if existing:
+        row = dict(existing)
+        if image_url and not row.get("image_url"):
+            updated = await fetchrow(
+                "UPDATE foods SET image_url = $2 WHERE id = $1 RETURNING id, name, slug, description, image_url, created_at;",
+                row["id"],
+                image_url,
+            )
+            if updated:
+                row = dict(updated)
+        return row
+
+    base_slug = slugify(name) or f"food-{uuid4().hex[:8]}"
+    candidate = base_slug
+    for _ in range(10):
+        try:
+            row = await fetchrow(
+                """
+                INSERT INTO foods (id, name, slug, description, image_url)
+                VALUES (gen_random_uuid(), $1, $2, $3, $4)
+                RETURNING id, name, slug, description, image_url, created_at;
+                """,
+                name.strip(),
+                candidate,
+                description,
+                image_url,
+            )
+            if row:
+                return dict(row)
+        except asyncpg.UniqueViolationError:
+            candidate = f"{base_slug}-{uuid4().hex[:6]}"
+    raise HTTPException(status_code=500, detail="Unable to create food")
+
+
+async def add_vendor_dish(
+    vendor_id: UUID,
+    *,
+    name: str,
+    description: str | None,
+    price: float | None,
+    available: bool,
+    image_url: str | None,
+) -> dict[str, Any]:
+    """Vendor-facing helper: ensure food exists in catalog, attach to vendor."""
+
+    vendor = await fetchrow("SELECT id FROM vendors WHERE id = $1;", vendor_id)
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    food = await find_or_create_food(name=name, description=description, image_url=image_url)
+
+    existing = await fetchrow(
+        "SELECT id FROM vendor_items WHERE vendor_id = $1 AND food_id = $2;",
+        vendor_id,
+        food["id"],
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Dish already on this vendor")
+
+    row = await fetchrow(
+        """
+        INSERT INTO vendor_items (id, vendor_id, food_id, ingredient_id, price, available)
+        VALUES (gen_random_uuid(), $1, $2, NULL, $3, $4)
+        RETURNING id, vendor_id, food_id, price, available;
+        """,
+        vendor_id,
+        food["id"],
+        price,
+        available,
+    )
+    assert row is not None
+    return {
+        "id": row["id"],
+        "vendor_id": row["vendor_id"],
+        "food_id": row["food_id"],
+        "ingredient_id": None,
+        "food": {
+            "id": food["id"],
+            "name": food["name"],
+            "slug": food["slug"],
+            "description": food.get("description"),
+            "image_url": food.get("image_url"),
+            "created_at": food.get("created_at"),
+        },
+        "ingredient": None,
+        "price": float(row["price"]) if row["price"] is not None else None,
+        "available": row["available"],
+        "item_type": "food",
+    }
+
+
 async def remove_vendor_item(vendor_id: UUID, item_id: UUID) -> None:
     """Remove a vendor item by vendor and item identifier."""
 

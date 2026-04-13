@@ -163,6 +163,27 @@ export const uploadProfilePhoto = async (file: File): Promise<MeResponse> => {
   return res.data
 }
 
+export interface AddDishInput {
+  name: string
+  description?: string
+  price?: number
+  available?: boolean
+  file?: File | null
+}
+
+export const addVendorDish = async (vendorId: string, input: AddDishInput): Promise<import("@/types").VendorItem> => {
+  const form = new FormData()
+  form.append('name', input.name)
+  if (input.description) form.append('description', input.description)
+  if (input.price != null) form.append('price', String(input.price))
+  form.append('available', String(input.available ?? true))
+  if (input.file) form.append('file', input.file)
+  const res = await api.post(`/vendors/${vendorId}/dishes`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data
+}
+
 export const uploadVendorImage = async (vendorId: string, file: File): Promise<Vendor> => {
   const form = new FormData()
   form.append('file', file)

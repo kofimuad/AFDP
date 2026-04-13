@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
 
 from app.schemas.error import ErrorResponse
 from app.schemas.vendor import VendorItemCreate, VendorItemOut, VendorOut, VendorRegisterIn
@@ -10,6 +10,7 @@ from app.services.analytics_service import log_view_event
 from app.services.auth_service import get_optional_user, require_vendor
 from app.services.cloudinary_service import upload_image
 from app.services.vendor_service import (
+    add_vendor_dish,
     add_vendor_item,
     get_vendor_detail,
     list_vendors,
@@ -177,6 +178,57 @@ async def upload_vendor_image_route(
         raise HTTPException(status_code=502, detail="Image upload failed") from exc
 
     return VendorOut.model_validate(await update_vendor_image(id, url))
+
+
+@router.post(
+    "/{id}/dishes",
+    response_model=VendorItemOut,
+    responses={
+        200: {"description": "Created dish", "content": {"application/json": {"example": VENDOR_ITEM_EXAMPLE}}},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+    },
+)
+async def add_vendor_dish_route(
+    id: UUID,
+    name: str = Form(..., min_length=1),
+    description: str | None = Form(default=None),
+    price: float | None = Form(default=None),
+    available: bool = Form(default=True),
+    file: UploadFile | None = File(default=None),
+    current_user: dict = Depends(require_vendor),
+) -> VendorItemOut:
+    """Add a dish to a vendor: finds-or-creates a food in the catalog, uploads image."""
+
+    if current_user["role"] != "admin" and current_user.get("vendor_id") != str(id):
+        raise HTTPException(status_code=403, detail="Not authorized for this vendor")
+
+    image_url: str | None = None
+    if file is not None:
+        content_type = (file.content_type or "").lower()
+        if content_type and content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=415, detail="Unsupported image type")
+        contents = await file.read()
+        if contents:
+            if len(contents) > MAX_IMAGE_BYTES:
+                raise HTTPException(status_code=413, detail="Image must be 5MB or smaller")
+            try:
+                from uuid import uuid4 as _uuid4
+                image_url = await upload_image(contents, folder="afdp/foods", public_id=_uuid4().hex)
+            except Exception as exc:
+                raise HTTPException(status_code=502, detail="Image upload failed") from exc
+
+    return VendorItemOut.model_validate(
+        await add_vendor_dish(
+            id,
+            name=name,
+            description=description,
+            price=price,
+            available=available,
+            image_url=image_url,
+        )
+    )
 
 
 @router.delete(

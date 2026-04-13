@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BarChart2, Eye, LayoutDashboard, MousePointer, Search, Settings, Shield, Store } from "lucide-react";
-import { getVendors, uploadVendorImage } from '@/lib/api';
+import { addVendorDish, getVendors, uploadVendorImage } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/authStore';
 import type { Vendor, VendorItem } from '@/types';
 
@@ -43,7 +43,9 @@ function DashboardPageInner() {
   const [loading, setLoading] = useState(true);
   const [showAddDish, setShowAddDish] = useState(false);
   const [addDishVendorId, setAddDishVendorId] = useState<string | null>(null);
-  const [dishForm, setDishForm] = useState({ name: "", description: "", image_file: null as File | null, image_preview: "", ingredients: "" });
+  const [dishForm, setDishForm] = useState({ name: "", description: "", image_file: null as File | null, image_preview: "", ingredients: "", price: "" });
+  const [savingDish, setSavingDish] = useState(false);
+  const [dishError, setDishError] = useState<string | null>(null);
   const [vendorImageFile, setVendorImageFile] = useState<File | null>(null);
   const [vendorImagePreview, setVendorImagePreview] = useState<string>("");
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -157,35 +159,31 @@ function DashboardPageInner() {
                                     <Modal open={showAddDish} onClose={() => setShowAddDish(false)} title="Add Dish">
                                       <form
                                         className="space-y-4"
-                                        onSubmit={e => {
+                                        onSubmit={async e => {
                                           e.preventDefault();
-                                          if (!addDishVendorId) return;
-                                          setVendors(vendors => vendors.map(v => v.id === addDishVendorId ? {
-                                            ...v,
-                                            vendor_items: [
-                                              ...v.vendor_items,
-                                              {
-                                                id: Math.random().toString(36).slice(2),
-                                                vendor_id: v.id,
-                                                food_id: null,
-                                                ingredient_id: null,
-                                                food: {
-                                                  id: Math.random().toString(36).slice(2),
-                                                  name: dishForm.name,
-                                                  slug: dishForm.name.toLowerCase().replace(/\s+/g, '-'),
-                                                  description: dishForm.description,
-                                                  image_url: dishForm.image_preview,
-                                                  created_at: new Date().toISOString(),
-                                                },
-                                                ingredient: null,
-                                                price: null,
-                                                available: true,
-                                                item_type: "food"
-                                              }
-                                            ]
-                                          } : v));
-                                          setShowAddDish(false);
-                                          setDishForm({ name: "", description: "", image_file: null, image_preview: "", ingredients: "" });
+                                          if (!addDishVendorId || savingDish) return;
+                                          setSavingDish(true);
+                                          setDishError(null);
+                                          try {
+                                            const priceNum = dishForm.price ? parseFloat(dishForm.price) : undefined;
+                                            const item = await addVendorDish(addDishVendorId, {
+                                              name: dishForm.name.trim(),
+                                              description: dishForm.description.trim() || undefined,
+                                              price: Number.isFinite(priceNum as number) ? priceNum : undefined,
+                                              available: true,
+                                              file: dishForm.image_file,
+                                            });
+                                            setVendors(vendors => vendors.map(v => v.id === addDishVendorId ? {
+                                              ...v,
+                                              vendor_items: [...v.vendor_items, item as VendorItem],
+                                            } : v));
+                                            setShowAddDish(false);
+                                            setDishForm({ name: "", description: "", image_file: null, image_preview: "", ingredients: "", price: "" });
+                                          } catch (err: any) {
+                                            setDishError(err?.response?.data?.detail || "Failed to add dish");
+                                          } finally {
+                                            setSavingDish(false);
+                                          }
                                         }}
                                       >
                                         <Input
@@ -223,12 +221,20 @@ function DashboardPageInner() {
                                           )}
                                         </div>
                                         <Input
+                                          placeholder="Price (optional)"
+                                          type="number"
+                                          step="0.01"
+                                          value={dishForm.price}
+                                          onChange={e => setDishForm(f => ({ ...f, price: e.target.value }))}
+                                        />
+                                        <Input
                                           placeholder="Ingredients (comma separated)"
                                           value={dishForm.ingredients}
                                           onChange={e => setDishForm(f => ({ ...f, ingredients: e.target.value }))}
                                         />
+                                        {dishError && <p className="text-sm text-red-500">{dishError}</p>}
                                         <div className="flex justify-end">
-                                          <Button type="submit">Add Dish</Button>
+                                          <Button type="submit" disabled={savingDish}>{savingDish ? "Saving…" : "Add Dish"}</Button>
                                         </div>
                                       </form>
                                     </Modal>
