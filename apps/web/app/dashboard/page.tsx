@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { BarChart2, Eye, LayoutDashboard, MousePointer, Search, Settings, Shield, Store } from "lucide-react";
 import { getVendors } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/authStore';
+import type { Vendor, VendorItem } from '@/types';
 
 const SIDEBAR_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
@@ -30,19 +31,20 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab") || "dashboard";
   const user = useAuthStore((state) => state.user);
-  const [vendors, setVendors] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDish, setShowAddDish] = useState(false);
   const [addDishVendorId, setAddDishVendorId] = useState<string | null>(null);
-  const [dishForm, setDishForm] = useState({ name: "", description: "", image_url: "", ingredients: "" });
+  const [dishForm, setDishForm] = useState({ name: "", description: "", image_file: null as File | null, image_preview: "", ingredients: "" });
 
   useEffect(() => {
     async function fetchVendors() {
       setLoading(true);
       try {
-        // Only fetch vendors for this user
-        if (user?.vendor_id) {
+        if (user?.id) {
           const all = await getVendors();
+          // Show all vendors where the user is the owner (assuming user.id matches vendor.owner_id or similar)
+          // If backend does not support owner_id, fallback to vendor_id array or similar logic
           setVendors(all.filter((v) => v.id === user.vendor_id));
         } else {
           setVendors([]);
@@ -52,7 +54,7 @@ export default function DashboardPage() {
       }
     }
     fetchVendors();
-  }, [user?.vendor_id]);
+  }, [user?.id, user?.vendor_id]);
 
   return (
     <ProtectedRoute requireRole="vendor">
@@ -132,7 +134,6 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-semibold text-md">Dishes</h3>
                           <Button
-                            size="sm"
                             onClick={() => {
                               setAddDishVendorId(vendor.id);
                               setShowAddDish(true);
@@ -161,7 +162,7 @@ export default function DashboardPage() {
                                                   name: dishForm.name,
                                                   slug: dishForm.name.toLowerCase().replace(/\s+/g, '-'),
                                                   description: dishForm.description,
-                                                  image_url: dishForm.image_url,
+                                                  image_url: dishForm.image_preview,
                                                   created_at: new Date().toISOString(),
                                                 },
                                                 ingredient: null,
@@ -172,7 +173,7 @@ export default function DashboardPage() {
                                             ]
                                           } : v));
                                           setShowAddDish(false);
-                                          setDishForm({ name: "", description: "", image_url: "", ingredients: "" });
+                                          setDishForm({ name: "", description: "", image_file: null, image_preview: "", ingredients: "" });
                                         }}
                                       >
                                         <Input
@@ -186,11 +187,29 @@ export default function DashboardPage() {
                                           value={dishForm.description}
                                           onChange={e => setDishForm(f => ({ ...f, description: e.target.value }))}
                                         />
-                                        <Input
-                                          placeholder="Image URL"
-                                          value={dishForm.image_url}
-                                          onChange={e => setDishForm(f => ({ ...f, image_url: e.target.value }))}
-                                        />
+                                        <div>
+                                          <label className="block text-sm font-medium mb-1">Dish Image</label>
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            capture="environment"
+                                            onChange={e => {
+                                              const file = e.target.files?.[0] || null;
+                                              if (file) {
+                                                setDishForm(f => ({
+                                                  ...f,
+                                                  image_file: file,
+                                                  image_preview: URL.createObjectURL(file)
+                                                }));
+                                              } else {
+                                                setDishForm(f => ({ ...f, image_file: null, image_preview: "" }));
+                                              }
+                                            }}
+                                          />
+                                          {dishForm.image_preview && (
+                                            <img src={dishForm.image_preview} alt="Preview" className="mt-2 h-24 w-24 object-cover rounded" />
+                                          )}
+                                        </div>
                                         <Input
                                           placeholder="Ingredients (comma separated)"
                                           value={dishForm.ingredients}
@@ -203,7 +222,7 @@ export default function DashboardPage() {
                                     </Modal>
                         {vendor.vendor_items && vendor.vendor_items.length > 0 ? (
                           <ul className="space-y-2">
-                            {vendor.vendor_items.filter(item => item.item_type === "food").map((item) => (
+                            {vendor.vendor_items.filter((item: VendorItem) => item.item_type === "food").map((item: VendorItem) => (
                               <li key={item.id} className="flex items-center justify-between border-b border-dashed border-gray-200 py-2">
                                 <div className="flex items-center gap-3">
                                   {item.food?.image_url ? (

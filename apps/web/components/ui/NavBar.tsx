@@ -216,17 +216,20 @@ export function NavBar() {
                   </div>
                 )}
 
-                <Link
-                  href="/vendors/register"
-                  className={cn(
-                    "rounded-[var(--radius-md)] border bg-transparent px-3 py-2 text-sm font-semibold transition",
-                    isHomeTop
-                      ? "border-white text-white hover:bg-white/20"
-                      : "border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-light)]"
-                  )}
-                >
-                  List Your Business
-                </Link>
+                {/* Hide 'List Your Business' if user already has a vendor listing */}
+                {(!user?.vendor_id) && (
+                  <Link
+                    href="/vendors/register"
+                    className={cn(
+                      "rounded-[var(--radius-md)] border bg-transparent px-3 py-2 text-sm font-semibold transition",
+                      isHomeTop
+                        ? "border-white text-white hover:bg-white/20"
+                        : "border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-light)]"
+                    )}
+                  >
+                    List Your Business
+                  </Link>
+                )}
               </>
             )}
           </div>
