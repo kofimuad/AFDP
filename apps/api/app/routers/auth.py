@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import asyncpg
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from app.core.database import fetchrow
+from app.services.cloudinary_service import upload_image
 from app.schemas.auth import (
     LoginRequest,
     RefreshRequest,
@@ -31,14 +31,8 @@ from app.services.vendor_service import register_vendor
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-ALLOWED_IMAGE_TYPES = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-}
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
-UPLOAD_DIR = Path("/app/uploads/profiles")
-UPLOAD_URL_PREFIX = "/uploads/profiles"
 
 async def _get_user_by_email(email: str) -> asyncpg.Record | None:
     return await fetchrow(
@@ -212,13 +206,15 @@ async def upload_profile_photo(
     if len(contents) > MAX_IMAGE_BYTES:
         raise HTTPException(status_code=413, detail="Image must be 5MB or smaller")
 
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    extension = ALLOWED_IMAGE_TYPES[content_type]
-    filename = f"{uuid4().hex}{extension}"
-    destination = UPLOAD_DIR / filename
-    destination.write_bytes(contents)
+    try:
+        url = await upload_image(
+            contents,
+            folder="afdp/profiles",
+            public_id=current_user["id"],
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Image upload failed") from exc
 
-    url = f"{UPLOAD_URL_PREFIX}/{filename}"
     updated = await fetchrow(
         """
         UPDATE users

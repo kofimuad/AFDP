@@ -389,6 +389,28 @@ async def list_admin_vendors() -> list[dict[str, Any]]:
     return await list_vendors(page=1, page_size=10_000)
 
 
+async def update_vendor_image(vendor_id: UUID, image_url: str) -> dict[str, Any]:
+    """Update a vendor's listing image and return the summary record."""
+
+    row = await fetchrow(
+        """
+        UPDATE vendors
+        SET image_url = $2
+        WHERE id = $1
+        RETURNING
+            id, name, slug, type, address,
+            ST_Y(location::geometry) AS lat,
+            ST_X(location::geometry) AS lng,
+            phone, website, image_url, is_verified, is_featured, created_at;
+        """,
+        vendor_id,
+        image_url,
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    return _row_to_vendor_summary(dict(row))
+
+
 async def verify_vendor(vendor_id: UUID) -> dict[str, Any]:
     """Mark a vendor as verified and return the updated record."""
 

@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BarChart2, Eye, LayoutDashboard, MousePointer, Search, Settings, Shield, Store } from "lucide-react";
-import { getVendors } from '@/lib/api';
+import { getVendors, uploadVendorImage } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/authStore';
 import type { Vendor, VendorItem } from '@/types';
 
@@ -44,6 +44,10 @@ function DashboardPageInner() {
   const [showAddDish, setShowAddDish] = useState(false);
   const [addDishVendorId, setAddDishVendorId] = useState<string | null>(null);
   const [dishForm, setDishForm] = useState({ name: "", description: "", image_file: null as File | null, image_preview: "", ingredients: "" });
+  const [vendorImageFile, setVendorImageFile] = useState<File | null>(null);
+  const [vendorImagePreview, setVendorImagePreview] = useState<string>("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchVendors() {
@@ -314,8 +318,56 @@ function DashboardPageInner() {
                       <Input defaultValue={vendors[0].website || ""} />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Profile Image URL</label>
-                      <Input defaultValue={vendors[0].image_url || ""} />
+                      <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Listing Image</label>
+                      <div className="flex items-center gap-3">
+                        {(vendorImagePreview || vendors[0].image_url) && (
+                          <img
+                            src={vendorImagePreview || vendors[0].image_url || ""}
+                            alt="Listing"
+                            className="h-16 w-16 rounded object-cover"
+                          />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0] || null;
+                            setVendorImageFile(f);
+                            setVendorImagePreview(f ? URL.createObjectURL(f) : "");
+                            setImageUploadError(null);
+                          }}
+                          className="text-sm text-[var(--color-text-primary)]"
+                        />
+                      </div>
+                      {vendorImageFile && (
+                        <Button
+                          type="button"
+                          className="mt-2"
+                          disabled={uploadingImage}
+                          onClick={async () => {
+                            if (!vendorImageFile) return;
+                            setUploadingImage(true);
+                            setImageUploadError(null);
+                            try {
+                              const updated = await uploadVendorImage(vendors[0].id, vendorImageFile);
+                              setVendors((prev) =>
+                                prev.map((v) => (v.id === updated.id ? { ...v, image_url: updated.image_url } : v))
+                              );
+                              setVendorImageFile(null);
+                              setVendorImagePreview("");
+                            } catch (err: any) {
+                              setImageUploadError(err.response?.data?.detail || "Upload failed");
+                            } finally {
+                              setUploadingImage(false);
+                            }
+                          }}
+                        >
+                          {uploadingImage ? "Uploading..." : "Upload image"}
+                        </Button>
+                      )}
+                      {imageUploadError && (
+                        <p className="mt-2 text-xs text-red-500">{imageUploadError}</p>
+                      )}
                     </div>
                     <div className="pt-4 border-t">
                       <label className="block text-sm font-medium mb-1">Owner Name</label>

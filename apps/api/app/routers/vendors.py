@@ -2,13 +2,24 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
 
 from app.schemas.error import ErrorResponse
 from app.schemas.vendor import VendorItemCreate, VendorItemOut, VendorOut, VendorRegisterIn
 from app.services.analytics_service import log_view_event
-from app.services.auth_service import get_optional_user
-from app.services.vendor_service import add_vendor_item, get_vendor_detail, list_vendors, register_vendor, remove_vendor_item
+from app.services.auth_service import get_optional_user, require_vendor
+from app.services.cloudinary_service import upload_image
+from app.services.vendor_service import (
+    add_vendor_item,
+    get_vendor_detail,
+    list_vendors,
+    register_vendor,
+    remove_vendor_item,
+    update_vendor_image,
+)
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
 router = APIRouter(prefix="/vendors", tags=["Vendors"])
 
@@ -129,6 +140,43 @@ async def add_vendor_item_route(id: UUID, payload: VendorItemCreate) -> VendorIt
     """Attach a food or ingredient to a vendor."""
 
     return VendorItemOut.model_validate(await add_vendor_item(id, payload))
+
+
+@router.post(
+    "/{id}/image",
+    response_model=VendorOut,
+    responses={
+        200: {"description": "Updated vendor", "content": {"application/json": {"example": VENDOR_EXAMPLE}}},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+    },
+)
+async def upload_vendor_image_route(
+    id: UUID,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(require_vendor),
+) -> VendorOut:
+    """Upload a listing image for a vendor. Owner (or admin) only."""
+
+    if current_user["role"] != "admin" and current_user.get("vendor_id") != str(id):
+        raise HTTPException(status_code=403, detail="Not authorized for this vendor")
+
+    content_type = (file.content_type or "").lower()
+    if content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=415, detail="Unsupported image type")
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Empty file")
+    if len(contents) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="Image must be 5MB or smaller")
+
+    try:
+        url = await upload_image(contents, folder="afdp/vendors", public_id=str(id))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Image upload failed") from exc
+
+    return VendorOut.model_validate(await update_vendor_image(id, url))
 
 
 @router.delete(

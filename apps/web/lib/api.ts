@@ -163,6 +163,15 @@ export const uploadProfilePhoto = async (file: File): Promise<MeResponse> => {
   return res.data
 }
 
+export const uploadVendorImage = async (vendorId: string, file: File): Promise<Vendor> => {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await api.post<Vendor>(`/vendors/${vendorId}/image`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data
+}
+
 export const getAssetUrl = (path: string | null | undefined): string | null => {
   if (!path) return null
   if (/^https?:\/\//i.test(path)) return path
