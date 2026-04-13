@@ -69,7 +69,9 @@ export default function AuthPage() {
           const me = await getMe();
           setAuth(me, res.access_token, res.refresh_token);
         } catch {}
-        if (res.user.role === 'admin' || res.user.role === 'vendor') {
+        if (res.user.role === 'admin') {
+          router.push('/admin' as any);
+        } else if (res.user.role === 'vendor') {
           router.push('/dashboard');
         } else {
           router.push('/search');
@@ -93,7 +95,9 @@ export default function AuthPage() {
           const me = await getMe();
           setAuth(me, res.access_token, res.refresh_token);
         } catch {}
-        if (res.user.role === 'admin' || res.user.role === 'vendor') {
+        if (res.user.role === 'admin') {
+          router.push('/admin' as any);
+        } else if (res.user.role === 'vendor') {
           router.push('/dashboard');
         } else {
           router.push('/search');

@@ -12,7 +12,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import get_settings
 from app.core.database import close_db_pool, init_db_pool
 from app.core.redis import close_redis, init_redis
-from app.routers import admin, analytics, foods, health, ingredients, search, vendors
+from app.routers import admin, admin_management, analytics, foods, health, ingredients, search, vendors
 from app.routers import auth as auth_router
 
 settings = get_settings()
@@ -141,6 +141,7 @@ app.include_router(foods.router, prefix=settings.api_v1_prefix)
 app.include_router(ingredients.router, prefix=settings.api_v1_prefix)
 app.include_router(admin.router, prefix=settings.api_v1_prefix)
 app.include_router(analytics.router, prefix=settings.api_v1_prefix)
+app.include_router(admin_management.router, prefix=settings.api_v1_prefix)
 app.include_router(health.router, prefix=settings.api_v1_prefix)
 app.include_router(
     auth_router.router,

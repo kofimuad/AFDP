@@ -214,6 +214,138 @@ export async function getIngredient(slug: string, lat?: number, lng?: number): P
   return data;
 }
 
+// --- ADMIN ANALYTICS ---
+
+export interface AdminTotals {
+  users: number
+  vendors: number
+  total_searches: number
+  zero_result_searches: number
+  total_views: number
+}
+
+export interface TopSearch {
+  normalized_query: string
+  count: number
+}
+
+export interface ZeroResultSearch {
+  normalized_query: string
+  count: number
+  avg_lat: number | null
+  avg_lng: number | null
+}
+
+export interface SearchGeoPoint {
+  lat: number
+  lng: number
+  normalized_query: string
+  zero_result: boolean
+}
+
+export interface TopViewed {
+  entity_id: string
+  count: number
+  name?: string
+  slug?: string
+}
+
+export const getAdminTotals = async (): Promise<AdminTotals> => {
+  const { data } = await api.get<AdminTotals>('/admin/analytics/totals')
+  return data
+}
+
+export const getTopSearches = async (days = 30, limit = 20): Promise<TopSearch[]> => {
+  const { data } = await api.get<TopSearch[]>('/admin/analytics/top-searches', { params: { days, limit } })
+  return data
+}
+
+export const getZeroResultSearches = async (days = 30, limit = 20): Promise<ZeroResultSearch[]> => {
+  const { data } = await api.get<ZeroResultSearch[]>('/admin/analytics/zero-result-searches', { params: { days, limit } })
+  return data
+}
+
+export const getSearchGeo = async (days = 30, limit = 1000): Promise<SearchGeoPoint[]> => {
+  const { data } = await api.get<SearchGeoPoint[]>('/admin/analytics/search-geo', { params: { days, limit } })
+  return data
+}
+
+export const getTopViewed = async (entityType: 'vendor' | 'food' | 'ingredient', days = 30, limit = 20): Promise<TopViewed[]> => {
+  const { data } = await api.get<TopViewed[]>(`/admin/analytics/top-viewed/${entityType}`, { params: { days, limit } })
+  return data
+}
+
+// --- ADMIN MANAGEMENT ---
+
+export interface AdminUser {
+  id: string
+  email: string
+  full_name: string
+  role: 'user' | 'vendor' | 'admin'
+  vendor_id: string | null
+  is_active: boolean
+  created_at: string | null
+  profile_image_url: string | null
+}
+
+export interface AdminVendor {
+  id: string
+  name: string
+  slug: string
+  type: string
+  address: string
+  lat: number | null
+  lng: number | null
+  phone: string | null
+  website: string | null
+  image_url: string | null
+  is_verified: boolean
+  is_featured: boolean
+  created_at: string | null
+  plan: 'basic' | 'featured' | 'premium'
+  plan_expires_at: string | null
+}
+
+export const adminListUsers = async (params?: { q?: string; role?: string; page?: number; page_size?: number }): Promise<AdminUser[]> => {
+  const { data } = await api.get<AdminUser[]>('/admin/manage/users', { params })
+  return data
+}
+
+export const adminUpdateUserRole = async (userId: string, role: string): Promise<AdminUser> => {
+  const { data } = await api.patch<AdminUser>(`/admin/manage/users/${userId}/role`, { role })
+  return data
+}
+
+export const adminSetUserActive = async (userId: string, isActive: boolean): Promise<AdminUser> => {
+  const { data } = await api.patch<AdminUser>(`/admin/manage/users/${userId}/active`, { is_active: isActive })
+  return data
+}
+
+export const adminListVendors = async (params?: { q?: string; is_verified?: boolean; plan?: string; page?: number; page_size?: number }): Promise<AdminVendor[]> => {
+  const { data } = await api.get<AdminVendor[]>('/admin/manage/vendors', { params })
+  return data
+}
+
+export const adminVerifyVendor = async (vendorId: string) => {
+  const { data } = await api.patch(`/admin/manage/vendors/${vendorId}/verify`)
+  return data
+}
+
+export const adminToggleVendorFeature = async (vendorId: string) => {
+  const { data } = await api.patch(`/admin/manage/vendors/${vendorId}/feature`)
+  return data
+}
+
+export const adminUpdateVendorPlan = async (vendorId: string, plan: string) => {
+  const { data } = await api.patch(`/admin/manage/vendors/${vendorId}/plan`, { plan })
+  return data
+}
+
+export const adminDeleteVendor = async (vendorId: string) => {
+  const { data } = await api.delete(`/admin/manage/vendors/${vendorId}`)
+  return data
+}
+
 export async function registerVendor(payload: RegisterVendorPayload): Promise<Vendor> {
   const { data } = await api.post<Vendor>("/vendors/register", payload);
   return data;
