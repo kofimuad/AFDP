@@ -2,10 +2,12 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
 from app.schemas.error import ErrorResponse
 from app.schemas.vendor import VendorItemCreate, VendorItemOut, VendorOut, VendorRegisterIn
+from app.services.analytics_service import log_view_event
+from app.services.auth_service import get_optional_user
 from app.services.vendor_service import add_vendor_item, get_vendor_detail, list_vendors, register_vendor, remove_vendor_item
 
 router = APIRouter(prefix="/vendors", tags=["Vendors"])
@@ -88,10 +90,22 @@ async def list_vendor_route(
         404: {"model": ErrorResponse, "content": {"application/json": {"example": {"error": "not_found", "detail": "Vendor not found"}}}},
     },
 )
-async def get_vendor_route(slug: str, lat: float | None = Query(default=None), lng: float | None = Query(default=None)) -> VendorOut:
+async def get_vendor_route(
+    slug: str,
+    background_tasks: BackgroundTasks,
+    lat: float | None = Query(default=None),
+    lng: float | None = Query(default=None),
+    current_user: dict | None = Depends(get_optional_user),
+) -> VendorOut:
     """Return a vendor detail record by slug."""
 
     payload = await get_vendor_detail(slug=slug, lat=lat, lng=lng)
+    background_tasks.add_task(
+        log_view_event,
+        entity_type="vendor",
+        entity_id=str(payload["id"]),
+        user_id=current_user["id"] if current_user else None,
+    )
     return VendorOut.model_validate(payload)
 
 

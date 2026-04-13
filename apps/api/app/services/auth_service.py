@@ -95,6 +95,18 @@ async def get_current_user(
         "profile_image_url": user_row["profile_image_url"],
     }
 
+async def get_optional_user(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any] | None:
+    """Return the current user if a valid token is present, else None. Never raises."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    try:
+        return await get_current_user(authorization=authorization)
+    except HTTPException:
+        return None
+
+
 async def require_vendor(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
     """Require vendor or admin role for protected vendor operations."""
     if current_user["role"] not in {"vendor", "admin"}:

@@ -1,9 +1,11 @@
 """Food router for catalog discovery and food detail responses."""
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
 from app.schemas.error import ErrorResponse
 from app.schemas.food import FoodDetailOut, FoodOut
+from app.services.analytics_service import log_view_event
+from app.services.auth_service import get_optional_user
 from app.services.food_service import get_food_detail, list_foods
 
 router = APIRouter(prefix="/foods", tags=["Foods"])
@@ -54,7 +56,20 @@ async def list_foods_route(region: str | None = Query(default=None)) -> list[Foo
         404: {"model": ErrorResponse, "content": {"application/json": {"example": {"error": "not_found", "detail": "Food not found"}}}},
     },
 )
-async def get_food_route(slug: str, lat: float | None = Query(default=None), lng: float | None = Query(default=None)) -> FoodDetailOut:
+async def get_food_route(
+    slug: str,
+    background_tasks: BackgroundTasks,
+    lat: float | None = Query(default=None),
+    lng: float | None = Query(default=None),
+    current_user: dict | None = Depends(get_optional_user),
+) -> FoodDetailOut:
     """Return a food detail record by slug."""
 
-    return FoodDetailOut.model_validate(await get_food_detail(slug=slug, lat=lat, lng=lng))
+    payload = await get_food_detail(slug=slug, lat=lat, lng=lng)
+    background_tasks.add_task(
+        log_view_event,
+        entity_type="food",
+        entity_id=str(payload["id"]),
+        user_id=current_user["id"] if current_user else None,
+    )
+    return FoodDetailOut.model_validate(payload)
