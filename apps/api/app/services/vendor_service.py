@@ -1,15 +1,3 @@
-async def get_vendor_by_id(vendor_id: UUID) -> dict[str, Any]:
-    """Return a vendor summary by ID."""
-    row = await fetchrow(
-        """
-        SELECT id, name, slug, type, address, ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng, phone, website, image_url, is_verified, is_featured, created_at
-        FROM vendors WHERE id = $1;
-        """,
-        vendor_id,
-    )
-    if not row:
-        raise HTTPException(status_code=404, detail="Vendor not found")
-    return _row_to_vendor_summary(dict(row))
 from __future__ import annotations
 
 from typing import Any
