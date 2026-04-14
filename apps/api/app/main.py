@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -67,8 +69,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-UPLOADS_DIR = Path("/app/uploads")
-UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+UPLOADS_DIR = Path(os.getenv("UPLOADS_DIR", "/app/uploads"))
+try:
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+except PermissionError:
+    UPLOADS_DIR = Path(tempfile.mkdtemp(prefix="afdp-uploads-"))
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
