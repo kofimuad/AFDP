@@ -8,8 +8,13 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-os.environ["DATABASE_URL"] = "postgresql://postgres:afdp_dev_2024@localhost:5432/afdp"
-os.environ["REDIS_URL"] = "redis://localhost:6379/0"
+os.environ.setdefault(
+    "DATABASE_URL",
+    "postgresql://postgres:afdp_dev_2024@localhost:5432/afdp",
+)
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-not-for-production")
+os.environ.setdefault("ADMIN_API_KEY", "test-admin-key")
 
 API_ROOT = Path(__file__).resolve().parents[1]
 if str(API_ROOT) not in sys.path:

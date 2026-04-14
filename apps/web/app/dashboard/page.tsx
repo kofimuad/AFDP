@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BarChart2, Eye, LayoutDashboard, MousePointer, Search, Settings, Shield, Store } from "lucide-react";
-import { addVendorDish, getVendors, uploadVendorImage, getMyVendor } from '@/lib/api';
+import { addVendorDish, uploadVendorImage, getMyVendor } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/authStore';
 import type { Vendor, VendorItem } from '@/types';
 

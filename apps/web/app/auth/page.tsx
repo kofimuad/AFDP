@@ -3,6 +3,7 @@
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import { FormEvent, useState } from "react";
 
 import { Input } from "@/components/ui/input";
@@ -70,7 +71,7 @@ export default function AuthPage() {
           setAuth(me, res.access_token, res.refresh_token);
         } catch {}
         if (res.user.role === 'admin') {
-          router.push('/admin' as any);
+          router.push('/admin' as Route);
         } else if (res.user.role === 'vendor') {
           router.push('/dashboard');
         } else {
@@ -96,7 +97,7 @@ export default function AuthPage() {
           setAuth(me, res.access_token, res.refresh_token);
         } catch {}
         if (res.user.role === 'admin') {
-          router.push('/admin' as any);
+          router.push('/admin' as Route);
         } else if (res.user.role === 'vendor') {
           router.push('/dashboard');
         } else {
