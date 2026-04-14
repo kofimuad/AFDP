@@ -12,10 +12,35 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import get_settings
 from app.core.database import close_db_pool, init_db_pool
 from app.core.redis import close_redis, init_redis
+from contextlib import asynccontextmanager
 from app.routers import admin, admin_management, analytics, foods, health, ingredients, search, vendors
 from app.routers import auth as auth_router
 
 settings = get_settings()
+
+
+# --- FastAPI lifespan context manager ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    try:
+        await init_db_pool()
+    except Exception:
+        pass
+    try:
+        await init_redis()
+    except Exception:
+        pass
+    yield
+    # Shutdown
+    try:
+        await close_db_pool()
+    except Exception:
+        pass
+    try:
+        await close_redis()
+    except Exception:
+        pass
 
 app = FastAPI(
     title="AFDP API",
@@ -23,6 +48,7 @@ app = FastAPI(
     description="African Food Discovery Platform API",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
     openapi_tags=[
         {"name": "Search", "description": "Food and vendor discovery endpoints."},
         {"name": "Vendors", "description": "Vendor discovery and onboarding endpoints."},
@@ -60,30 +86,6 @@ def _validation_detail(errors: list[dict]) -> str:
     return "; ".join(messages)
 
 
-@app.on_event("startup")
-async def on_startup() -> None:
-    try:
-        await init_db_pool()
-    except Exception:
-        pass
-
-    try:
-        await init_redis()
-    except Exception:
-        pass
-
-
-@app.on_event("shutdown")
-async def on_shutdown() -> None:
-    try:
-        await close_db_pool()
-    except Exception:
-        pass
-
-    try:
-        await close_redis()
-    except Exception:
-        pass
 
 
 @app.exception_handler(StarletteHTTPException)

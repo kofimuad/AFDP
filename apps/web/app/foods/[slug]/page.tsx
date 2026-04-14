@@ -1,3 +1,13 @@
+export async function generateMetadata({ params }) {
+  const food = await getFood(params.slug).catch(() => null)
+  return {
+    title: food
+      ? `${food.name} | AFDP`
+      : "Dish | AFDP",
+    description: food?.description
+      ?? "Discover this African dish on AFDP.",
+  }
+}
 import { notFound } from "next/navigation";
 
 import { FoodDetailInteractive } from "@/components/food/FoodDetailInteractive.client";

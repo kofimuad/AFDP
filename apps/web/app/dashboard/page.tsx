@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BarChart2, Eye, LayoutDashboard, MousePointer, Search, Settings, Shield, Store } from "lucide-react";
-import { addVendorDish, getVendors, uploadVendorImage } from '@/lib/api';
+import { addVendorDish, getVendors, uploadVendorImage, getMyVendor } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/authStore';
 import type { Vendor, VendorItem } from '@/types';
 
@@ -52,23 +52,29 @@ function DashboardPageInner() {
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchVendors() {
-      setLoading(true);
+    async function fetchMyVendor() {
+      setLoading(true)
       try {
-        if (user?.id) {
-          const all = await getVendors();
-          // Show all vendors where the user is the owner (assuming user.id matches vendor.owner_id or similar)
-          // If backend does not support owner_id, fallback to vendor_id array or similar logic
-          setVendors(all.filter((v) => v.id === user.vendor_id));
+        if (user?.vendor_id) {
+          const vendor = await getMyVendor()
+          setVendors([vendor])
         } else {
-          setVendors([]);
+          setVendors([])
+        }
+      } catch (err: any) {
+        // 404 means no listing yet — show empty state
+        if (err?.response?.status === 404) {
+          setVendors([])
+        } else {
+          console.error('Failed to fetch vendor listing', err)
+          setVendors([])
         }
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     }
-    fetchVendors();
-  }, [user?.id, user?.vendor_id]);
+    fetchMyVendor()
+  }, [user?.vendor_id])
 
   return (
     <ProtectedRoute requireRole="vendor">

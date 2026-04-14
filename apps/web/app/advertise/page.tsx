@@ -1,3 +1,8 @@
+export const metadata = {
+  title: "Advertise Your Business | AFDP",
+  description:
+    "Reach thousands of African food lovers. List your restaurant or grocery store on AFDP.",
+};
 import { Check, X } from "lucide-react";
 import Link from "next/link";
 

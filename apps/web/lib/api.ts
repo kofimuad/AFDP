@@ -1,3 +1,8 @@
+// --- VENDOR: Get my vendor (authenticated) ---
+export const getMyVendor = async (): Promise<Vendor> => {
+  const { data } = await api.get<Vendor>("/vendors/me");
+  return data;
+};
 import axios from "axios";
 
 import type {

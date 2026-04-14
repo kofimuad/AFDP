@@ -26,8 +26,16 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "AFDP",
-  description: "African Food Discovery Platform"
+  title: "AFDP — African Food Discovery Platform",
+  description:
+    "Find African restaurants, grocery stores, and ingredients near you.",
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -13,11 +13,40 @@ from app.services.vendor_service import (
     add_vendor_dish,
     add_vendor_item,
     get_vendor_detail,
+    get_vendor_by_id,
     list_vendors,
     register_vendor,
     remove_vendor_item,
     update_vendor_image,
 )
+
+# --- GET /vendors/me endpoint ---
+@router.get(
+    "/me",
+    response_model=VendorOut,
+    responses={
+        200: {"description": "Authenticated vendor detail"},
+        404: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+    },
+    tags=["Vendors"],
+)
+async def get_my_vendor_route(
+    current_user: dict = Depends(require_vendor),
+) -> VendorOut:
+    """Return the authenticated vendor's own listing with all items."""
+    vendor_id = current_user.get("vendor_id")
+    if not vendor_id:
+        raise HTTPException(
+            status_code=404,
+            detail="No vendor listing found for this account"
+        )
+    from uuid import UUID
+    payload = await get_vendor_by_id(UUID(vendor_id))
+    # get_vendor_by_id returns summary without items, fetch full detail
+    # Use get_vendor_detail by fetching slug from the summary
+    full = await get_vendor_detail(slug=payload["slug"])
+    return VendorOut.model_validate(full)
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_IMAGE_BYTES = 5 * 1024 * 1024

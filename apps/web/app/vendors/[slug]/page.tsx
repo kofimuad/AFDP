@@ -1,3 +1,14 @@
+export async function generateMetadata({ params }) {
+  const vendor = await getVendor(params.slug).catch(() => null)
+  return {
+    title: vendor
+      ? `${vendor.name} | AFDP`
+      : "Vendor | AFDP",
+    description: vendor
+      ? `${vendor.name} — ${vendor.address}`
+      : "African food vendor on AFDP",
+  }
+}
 import Link from "next/link";
 import { notFound } from "next/navigation";
 

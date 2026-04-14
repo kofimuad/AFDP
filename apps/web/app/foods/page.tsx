@@ -1,3 +1,8 @@
+export const metadata = {
+  title: "Popular African Dishes | AFDP",
+  description:
+    "Explore popular African dishes and find restaurants and ingredients near you.",
+};
 import Link from "next/link";
 
 import type { FoodSummary } from "@/types";

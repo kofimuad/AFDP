@@ -105,6 +105,20 @@ export function SearchPanel({ data, isLoading, activeVendorId, onVendorSelect, p
           </div>
         </section>
       ) : null}
+
+      {/* Preparation guide placeholder */}
+      {data?.food_match && (
+        <section className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg">👨‍🍳</span>
+            <h3 className="display-font text-xl text-[var(--color-text-primary)]">How to prepare it</h3>
+            <span className="rounded-full bg-[var(--color-primary-light)] px-2 py-0.5 text-xs font-medium text-[var(--color-primary)]">Coming soon</span>
+          </div>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            Step-by-step preparation guides and video recipes for {data.food_match.name} will appear here.
+          </p>
+        </section>
+      )}
     </div>
   );
 }
