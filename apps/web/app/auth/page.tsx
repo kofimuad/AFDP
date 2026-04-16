@@ -1,7 +1,6 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { FormEvent, useState } from "react";
@@ -9,6 +8,7 @@ import { FormEvent, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/ui/Logo";
 import { useAuthStore } from "@/lib/store/authStore";
+import { useToast } from "@/lib/store/toastStore";
 import { registerUser, loginUser, getMe } from '@/lib/api'
 
 type FormState = {
@@ -28,6 +28,7 @@ const INITIAL_FORM: FormState = {
 export default function AuthPage() {
   const router = useRouter();
   const { setAuth } = useAuthStore();
+  const { showToast } = useToast();
   const [mode, setMode] = useState<'signup' | 'signin'>('signup');
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
@@ -202,10 +203,14 @@ export default function AuthPage() {
               </div>
             </label>
           ) : (
-            <div className="text-right">
-              <Link href="#" className="text-xs text-[var(--color-primary)]">
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => showToast("Password reset coming soon", "info")}
+                className="border-0 bg-transparent p-0 text-xs text-[var(--color-primary)] hover:underline"
+              >
                 Forgot password?
-              </Link>
+              </button>
             </div>
           )}
 
