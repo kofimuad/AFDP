@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BarChart2, Eye, LayoutDashboard, MousePointer, Search, Settings, Shield, Store } from "lucide-react";
-import { addVendorDish, updateVendor, uploadVendorImage, getMyVendor } from '@/lib/api';
+import { addVendorDish, removeVendorItem, updateVendor, updateVendorItem, uploadVendorImage, getMyVendor } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useToast } from '@/lib/store/toastStore';
 import type { Vendor, VendorItem } from '@/types';
@@ -59,6 +59,10 @@ function DashboardPageInner() {
     website: "",
   });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [editingItem, setEditingItem] = useState<{ vendorId: string; item: VendorItem } | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "", price: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -280,16 +284,46 @@ function DashboardPageInner() {
                                 </div>
                                 <div className="flex gap-2">
                                   <button
+                                    type="button"
                                     className="rounded bg-blue-500 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-600"
-                                    onClick={() => alert('Edit Dish (not yet implemented)')}
+                                    onClick={() => {
+                                      setEditingItem({ vendorId: vendor.id, item });
+                                      setEditForm({
+                                        name: item.food?.name || "",
+                                        description: item.food?.description || "",
+                                        price: item.price != null ? String(item.price) : "",
+                                      });
+                                    }}
                                   >
                                     Edit
                                   </button>
                                   <button
-                                    className="rounded bg-red-500 px-2 py-1 text-xs font-semibold text-white hover:bg-red-600"
-                                    onClick={() => alert('Remove Dish (not yet implemented)')}
+                                    type="button"
+                                    disabled={removingItemId === item.id}
+                                    className="rounded bg-red-500 px-2 py-1 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-60"
+                                    onClick={async () => {
+                                      if (removingItemId) return;
+                                      const ok = window.confirm(`Remove "${item.food?.name ?? "this dish"}" from your menu?`);
+                                      if (!ok) return;
+                                      setRemovingItemId(item.id);
+                                      try {
+                                        await removeVendorItem(vendor.id, item.id);
+                                        setVendors((prev) =>
+                                          prev.map((v) =>
+                                            v.id === vendor.id
+                                              ? { ...v, vendor_items: v.vendor_items.filter((i) => i.id !== item.id) }
+                                              : v
+                                          )
+                                        );
+                                        showToast("Dish removed", "success");
+                                      } catch (err: any) {
+                                        showToast(err?.response?.data?.detail || "Failed to remove dish", "error");
+                                      } finally {
+                                        setRemovingItemId(null);
+                                      }
+                                    }}
                                   >
-                                    Remove
+                                    {removingItemId === item.id ? "Removing..." : "Remove"}
                                   </button>
                                 </div>
                               </li>
@@ -304,6 +338,79 @@ function DashboardPageInner() {
                 )}
               </section>
             )}
+
+            <Modal open={editingItem !== null} onClose={() => setEditingItem(null)} title="Edit Dish">
+              <form
+                className="space-y-4"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!editingItem || savingEdit) return;
+                  setSavingEdit(true);
+                  try {
+                    const priceNum = editForm.price.trim() ? parseFloat(editForm.price) : null;
+                    if (editForm.price.trim() && !Number.isFinite(priceNum as number)) {
+                      showToast("Price must be a number", "error");
+                      setSavingEdit(false);
+                      return;
+                    }
+                    const updated = await updateVendorItem(editingItem.vendorId, editingItem.item.id, {
+                      name: editForm.name.trim(),
+                      description: editForm.description.trim() || null,
+                      price: priceNum,
+                    });
+                    setVendors((prev) =>
+                      prev.map((v) =>
+                        v.id === editingItem.vendorId
+                          ? {
+                              ...v,
+                              vendor_items: v.vendor_items.map((i) => (i.id === updated.id ? updated : i)),
+                            }
+                          : v
+                      )
+                    );
+                    showToast("Dish updated", "success");
+                    setEditingItem(null);
+                  } catch (err: any) {
+                    showToast(err?.response?.data?.detail || "Failed to update dish", "error");
+                  } finally {
+                    setSavingEdit(false);
+                  }
+                }}
+              >
+                <div>
+                  <label className="block text-sm font-medium mb-1">Dish Name</label>
+                  <Input
+                    value={editForm.name}
+                    onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <Input
+                    value={editForm.description}
+                    onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Price</label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editForm.price}
+                    onChange={(e) => setEditForm((f) => ({ ...f, price: e.target.value }))}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" onClick={() => setEditingItem(null)} disabled={savingEdit}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={savingEdit}>
+                    {savingEdit ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </Modal>
 
             {tab === "analytics" && (
               <section className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-sm)]">

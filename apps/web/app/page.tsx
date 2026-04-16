@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getFoods } from "@/lib/api";
 
 export default async function HomePage() {
-  const foods = await getFoods().catch(() => []);
+  const foods = await getFoods({ hasVendors: true }).catch(() => []);
 
   return (
     <main>

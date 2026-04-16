@@ -465,6 +465,70 @@ async def remove_vendor_item(vendor_id: UUID, item_id: UUID) -> None:
         raise HTTPException(status_code=404, detail="Vendor item not found")
 
 
+async def update_vendor_item(
+    vendor_id: UUID,
+    item_id: UUID,
+    fields: dict[str, Any],
+) -> dict[str, Any]:
+    """Update a vendor's dish: name/description on the linked food, price on the item."""
+
+    item_row = await fetchrow(
+        "SELECT id, vendor_id, food_id, ingredient_id FROM vendor_items WHERE id = $1 AND vendor_id = $2;",
+        item_id,
+        vendor_id,
+    )
+    if not item_row:
+        raise HTTPException(status_code=404, detail="Vendor item not found")
+    if item_row["food_id"] is None:
+        raise HTTPException(status_code=400, detail="Only food items can be edited via this endpoint")
+
+    food_updates: dict[str, Any] = {}
+    if "name" in fields and fields["name"] is not None:
+        food_updates["name"] = str(fields["name"]).strip()
+    if "description" in fields:
+        food_updates["description"] = fields["description"]
+
+    if food_updates:
+        params: list[Any] = []
+        set_clauses = [f"{col} = {bind_param(params, value)}" for col, value in food_updates.items()]
+        food_id_placeholder = bind_param(params, item_row["food_id"])
+        await execute(
+            f"UPDATE foods SET {', '.join(set_clauses)} WHERE id = {food_id_placeholder};",
+            *params,
+        )
+
+    if "price" in fields:
+        await execute(
+            "UPDATE vendor_items SET price = $1 WHERE id = $2;",
+            fields["price"],
+            item_id,
+        )
+
+    refreshed = await fetchrow(
+        """
+        SELECT
+            vi.id,
+            vi.vendor_id,
+            vi.food_id AS vendor_food_id,
+            vi.ingredient_id AS vendor_ingredient_id,
+            vi.price,
+            vi.available,
+            f.id AS food_id,
+            f.name AS food_name,
+            f.slug AS food_slug,
+            f.description AS food_description,
+            f.image_url AS food_image_url,
+            f.created_at AS food_created_at
+        FROM vendor_items vi
+        LEFT JOIN foods f ON f.id = vi.food_id
+        WHERE vi.id = $1;
+        """,
+        item_id,
+    )
+    assert refreshed is not None
+    return _row_to_vendor_item(dict(refreshed))
+
+
 async def get_vendor_by_id(vendor_id: UUID) -> dict[str, Any]:
     """Fetch a vendor by primary key."""
 

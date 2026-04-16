@@ -44,6 +44,14 @@ class VendorSelfUpdate(BaseModel):
     website: str | None = None
 
 
+class VendorItemUpdate(BaseModel):
+    """Partial update to a vendor's dish (food name/description + item price)."""
+
+    name: str | None = None
+    description: str | None = None
+    price: float | None = None
+
+
 class VendorItemCreate(BaseModel):
     """Payload for attaching a food or ingredient to a vendor."""
 

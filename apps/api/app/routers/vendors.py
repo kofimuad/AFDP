@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
 
 from app.schemas.error import ErrorResponse
-from app.schemas.vendor import VendorItemCreate, VendorItemOut, VendorOut, VendorRegisterIn, VendorSelfUpdate
+from app.schemas.vendor import VendorItemCreate, VendorItemOut, VendorItemUpdate, VendorOut, VendorRegisterIn, VendorSelfUpdate
 from app.services.analytics_service import log_view_event
 from app.services.auth_service import get_optional_user, require_vendor
 from app.services.cloudinary_service import upload_image
@@ -19,6 +19,7 @@ from app.services.vendor_service import (
     remove_vendor_item,
     update_vendor,
     update_vendor_image,
+    update_vendor_item,
 )
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -285,10 +286,45 @@ async def add_vendor_dish_route(
 @router.delete(
     "/{id}/items/{item_id}",
     response_model=dict[str, str],
-    responses={200: {"description": "Deleted vendor item", "content": {"application/json": {"example": {"status": "deleted", "id": "22222222-2222-2222-2222-222222222222"}}}}},
+    responses={
+        200: {"description": "Deleted vendor item", "content": {"application/json": {"example": {"status": "deleted", "id": "22222222-2222-2222-2222-222222222222"}}}},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+    },
 )
-async def remove_vendor_item_route(id: UUID, item_id: UUID) -> dict[str, str]:
-    """Remove an item from a vendor."""
+async def remove_vendor_item_route(
+    id: UUID,
+    item_id: UUID,
+    current_user: dict = Depends(require_vendor),
+) -> dict[str, str]:
+    """Remove an item from a vendor. Owner (or admin) only."""
+
+    if current_user["role"] != "admin" and current_user.get("vendor_id") != str(id):
+        raise HTTPException(status_code=403, detail="Not authorized for this vendor")
 
     await remove_vendor_item(id, item_id)
     return {"status": "deleted", "id": str(item_id)}
+
+
+@router.patch(
+    "/{id}/items/{item_id}",
+    response_model=VendorItemOut,
+    responses={
+        200: {"description": "Updated vendor item", "content": {"application/json": {"example": VENDOR_ITEM_EXAMPLE}}},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+    },
+)
+async def update_vendor_item_route(
+    id: UUID,
+    item_id: UUID,
+    payload: VendorItemUpdate,
+    current_user: dict = Depends(require_vendor),
+) -> VendorItemOut:
+    """Update a vendor's dish: name/description on the food, price on the item. Owner (or admin) only."""
+
+    if current_user["role"] != "admin" and current_user.get("vendor_id") != str(id):
+        raise HTTPException(status_code=403, detail="Not authorized for this vendor")
+
+    fields = payload.model_dump(exclude_unset=True)
+    return VendorItemOut.model_validate(await update_vendor_item(id, item_id, fields))

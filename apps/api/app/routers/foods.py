@@ -42,10 +42,16 @@ FOOD_DETAIL_EXAMPLE = {
     response_model=list[FoodOut],
     responses={200: {"description": "Food list", "content": {"application/json": {"example": [FOOD_EXAMPLE]}}}},
 )
-async def list_foods_route(region: str | None = Query(default=None)) -> list[FoodOut]:
-    """List foods with an optional region filter."""
+async def list_foods_route(
+    region: str | None = Query(default=None),
+    has_vendors: bool | None = Query(default=None),
+) -> list[FoodOut]:
+    """List foods with an optional region filter and optional vendor-listed filter."""
 
-    return [FoodOut.model_validate(row) for row in await list_foods(region=region)]
+    return [
+        FoodOut.model_validate(row)
+        for row in await list_foods(region=region, has_vendors=has_vendors)
+    ]
 
 
 @router.get(

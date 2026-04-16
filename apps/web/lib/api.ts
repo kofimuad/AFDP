@@ -198,6 +198,25 @@ export const uploadVendorImage = async (vendorId: string, file: File): Promise<V
   return res.data
 }
 
+export interface UpdateVendorItemInput {
+  name?: string
+  description?: string | null
+  price?: number | null
+}
+
+export const updateVendorItem = async (
+  vendorId: string,
+  itemId: string,
+  input: UpdateVendorItemInput
+): Promise<import("@/types").VendorItem> => {
+  const { data } = await api.patch(`/vendors/${vendorId}/items/${itemId}`, input)
+  return data
+}
+
+export const removeVendorItem = async (vendorId: string, itemId: string): Promise<void> => {
+  await api.delete(`/vendors/${vendorId}/items/${itemId}`)
+}
+
 export interface UpdateVendorInput {
   name?: string
   type?: 'restaurant' | 'grocery_store'
@@ -238,8 +257,11 @@ export async function getVendor(slug: string, lat?: number, lng?: number): Promi
   return data;
 }
 
-export async function getFoods(): Promise<FoodSummary[]> {
-  const { data } = await api.get<FoodSummary[]>("/foods");
+export async function getFoods(params?: { region?: string; hasVendors?: boolean }): Promise<FoodSummary[]> {
+  const query: Record<string, string | boolean> = {};
+  if (params?.region) query.region = params.region;
+  if (params?.hasVendors) query.has_vendors = true;
+  const { data } = await api.get<FoodSummary[]>("/foods", { params: query });
   return data;
 }
 

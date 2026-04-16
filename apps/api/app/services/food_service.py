@@ -23,33 +23,39 @@ def _row_to_food_summary(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def list_foods(region: str | None = None) -> list[dict[str, Any]]:
-    """Return all foods, optionally restricted to a named region."""
+async def list_foods(
+    region: str | None = None,
+    has_vendors: bool | None = None,
+) -> list[dict[str, Any]]:
+    """Return all foods, optionally restricted to a named region or to those with vendor listings."""
+
+    params: list[Any] = []
+    where_clauses: list[str] = []
 
     if region:
-        rows = await fetch(
-            """
-            SELECT f.id, f.name, f.slug, f.description, f.image_url, f.created_at
-            FROM foods f
-            WHERE EXISTS (
+        region_placeholder = bind_param(params, region)
+        where_clauses.append(
+            f"""EXISTS (
                 SELECT 1
                 FROM food_regions fr
                 JOIN regions r ON r.id = fr.region_id
-                WHERE fr.food_id = f.id AND r.name ILIKE $1
-            )
-            ORDER BY f.name ASC;
-            """,
-            region,
-        )
-    else:
-        rows = await fetch(
-            """
-            SELECT id, name, slug, description, image_url, created_at
-            FROM foods
-            ORDER BY name ASC;
-            """
+                WHERE fr.food_id = f.id AND r.name ILIKE {region_placeholder}
+            )"""
         )
 
+    if has_vendors:
+        where_clauses.append(
+            "EXISTS (SELECT 1 FROM vendor_items vi WHERE vi.food_id = f.id)"
+        )
+
+    where_sql = " AND ".join(where_clauses) if where_clauses else "TRUE"
+    sql = f"""
+        SELECT f.id, f.name, f.slug, f.description, f.image_url, f.created_at
+        FROM foods f
+        WHERE {where_sql}
+        ORDER BY f.name ASC;
+    """
+    rows = await fetch(sql, *params)
     return [_row_to_food_summary(dict(row)) for row in rows]
 
 
