@@ -34,6 +34,16 @@ class VendorUpdate(BaseModel):
     is_featured: bool | None = None
 
 
+class VendorSelfUpdate(BaseModel):
+    """Fields a vendor owner may update on their own listing."""
+
+    name: str | None = None
+    type: Literal["restaurant", "grocery_store"] | None = None
+    address: str | None = None
+    phone: str | None = None
+    website: str | None = None
+
+
 class VendorItemCreate(BaseModel):
     """Payload for attaching a food or ingredient to a vendor."""
 

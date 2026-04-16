@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
 
 from app.schemas.error import ErrorResponse
-from app.schemas.vendor import VendorItemCreate, VendorItemOut, VendorOut, VendorRegisterIn
+from app.schemas.vendor import VendorItemCreate, VendorItemOut, VendorOut, VendorRegisterIn, VendorSelfUpdate
 from app.services.analytics_service import log_view_event
 from app.services.auth_service import get_optional_user, require_vendor
 from app.services.cloudinary_service import upload_image
@@ -17,6 +17,7 @@ from app.services.vendor_service import (
     list_vendors,
     register_vendor,
     remove_vendor_item,
+    update_vendor,
     update_vendor_image,
 )
 
@@ -203,6 +204,31 @@ async def upload_vendor_image_route(
         raise HTTPException(status_code=502, detail="Image upload failed") from exc
 
     return VendorOut.model_validate(await update_vendor_image(id, url))
+
+
+@router.patch(
+    "/{id}",
+    response_model=VendorOut,
+    responses={
+        200: {"description": "Updated vendor", "content": {"application/json": {"example": VENDOR_EXAMPLE}}},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+    },
+)
+async def update_vendor_route(
+    id: UUID,
+    payload: VendorSelfUpdate,
+    current_user: dict = Depends(require_vendor),
+) -> VendorOut:
+    """Update a vendor's own profile fields. Owner (or admin) only."""
+
+    if current_user["role"] != "admin" and current_user.get("vendor_id") != str(id):
+        raise HTTPException(status_code=403, detail="Not authorized for this vendor")
+
+    fields = payload.model_dump(exclude_unset=True)
+    updated = await update_vendor(id, fields)
+    full = await get_vendor_detail(slug=updated["slug"])
+    return VendorOut.model_validate(full)
 
 
 @router.post(

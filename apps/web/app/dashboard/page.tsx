@@ -8,8 +8,9 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BarChart2, Eye, LayoutDashboard, MousePointer, Search, Settings, Shield, Store } from "lucide-react";
-import { addVendorDish, uploadVendorImage, getMyVendor } from '@/lib/api';
+import { addVendorDish, updateVendor, uploadVendorImage, getMyVendor } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/authStore';
+import { useToast } from '@/lib/store/toastStore';
 import type { Vendor, VendorItem } from '@/types';
 
 const SIDEBAR_ITEMS = [
@@ -50,6 +51,15 @@ function DashboardPageInner() {
   const [vendorImagePreview, setVendorImagePreview] = useState<string>("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [settingsForm, setSettingsForm] = useState({
+    name: "",
+    type: "",
+    address: "",
+    phone: "",
+    website: "",
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     async function fetchMyVendor() {
@@ -58,6 +68,13 @@ function DashboardPageInner() {
         if (user?.vendor_id) {
           const vendor = await getMyVendor()
           setVendors([vendor])
+          setSettingsForm({
+            name: vendor.name || "",
+            type: vendor.type || "",
+            address: vendor.address || "",
+            phone: vendor.phone || "",
+            website: vendor.website || "",
+          })
         } else {
           setVendors([])
         }
@@ -308,26 +325,65 @@ function DashboardPageInner() {
               <section className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-sm)] max-w-xl">
                 <h2 className="display-font text-2xl text-[var(--color-text-primary)]">Business & Profile Settings</h2>
                 {vendors.length > 0 ? (
-                  <form className="mt-6 space-y-4">
+                  <form
+                    className="mt-6 space-y-4"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (savingSettings) return;
+                      setSavingSettings(true);
+                      try {
+                        const updated = await updateVendor(vendors[0].id, {
+                          name: settingsForm.name.trim(),
+                          address: settingsForm.address.trim(),
+                          phone: settingsForm.phone.trim() || null,
+                          website: settingsForm.website.trim() || null,
+                        });
+                        setVendors((prev) => prev.map((v) => (v.id === updated.id ? { ...v, ...updated } : v)));
+                        showToast("Changes saved", "success");
+                      } catch (err: any) {
+                        const msg = err?.response?.data?.detail || "Failed to save changes";
+                        showToast(msg, "error");
+                      } finally {
+                        setSavingSettings(false);
+                      }
+                    }}
+                  >
                     <div>
                       <label className="block text-sm font-medium mb-1">Business Name</label>
-                      <Input defaultValue={vendors[0].name} />
+                      <Input
+                        value={settingsForm.name}
+                        onChange={(e) => setSettingsForm((f) => ({ ...f, name: e.target.value }))}
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Business Type</label>
-                      <Input defaultValue={vendors[0].type} />
+                      <label className="block text-sm font-medium mb-1 text-[var(--color-text-muted)]">Business Type</label>
+                      <Input
+                        value={settingsForm.type === "grocery_store" ? "Grocery Store" : settingsForm.type === "restaurant" ? "Restaurant" : ""}
+                        readOnly
+                        disabled
+                        className="cursor-not-allowed bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]"
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1">Address</label>
-                      <Input defaultValue={vendors[0].address} />
+                      <Input
+                        value={settingsForm.address}
+                        onChange={(e) => setSettingsForm((f) => ({ ...f, address: e.target.value }))}
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1">Phone</label>
-                      <Input defaultValue={vendors[0].phone || ""} />
+                      <Input
+                        value={settingsForm.phone}
+                        onChange={(e) => setSettingsForm((f) => ({ ...f, phone: e.target.value }))}
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1">Website</label>
-                      <Input defaultValue={vendors[0].website || ""} />
+                      <Input
+                        value={settingsForm.website}
+                        onChange={(e) => setSettingsForm((f) => ({ ...f, website: e.target.value }))}
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Listing Image</label>
@@ -382,15 +438,27 @@ function DashboardPageInner() {
                       )}
                     </div>
                     <div className="pt-4 border-t">
-                      <label className="block text-sm font-medium mb-1">Owner Name</label>
-                      <Input defaultValue={user?.full_name || ""} />
+                      <label className="block text-sm font-medium mb-1 text-[var(--color-text-muted)]">Owner Name</label>
+                      <Input
+                        value={user?.full_name || ""}
+                        readOnly
+                        disabled
+                        className="cursor-not-allowed bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]"
+                      />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Contact Email</label>
-                      <Input defaultValue={user?.email || ""} />
+                      <label className="block text-sm font-medium mb-1 text-[var(--color-text-muted)]">Contact Email</label>
+                      <Input
+                        value={user?.email || ""}
+                        readOnly
+                        disabled
+                        className="cursor-not-allowed bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]"
+                      />
                     </div>
                     <div className="flex justify-end">
-                      <Button type="submit">Save Changes</Button>
+                      <Button type="submit" disabled={savingSettings}>
+                        {savingSettings ? "Saving..." : "Save Changes"}
+                      </Button>
                     </div>
                   </form>
                 ) : (

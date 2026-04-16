@@ -491,6 +491,36 @@ async def list_admin_vendors() -> list[dict[str, Any]]:
     return await list_vendors(page=1, page_size=10_000)
 
 
+ALLOWED_VENDOR_UPDATE_COLUMNS = {"name", "type", "address", "phone", "website"}
+
+
+async def update_vendor(vendor_id: UUID, fields: dict[str, Any]) -> dict[str, Any]:
+    """Partial-update a vendor and return the summary record."""
+
+    filtered = {k: v for k, v in fields.items() if k in ALLOWED_VENDOR_UPDATE_COLUMNS}
+    if not filtered:
+        return await get_vendor_by_id(vendor_id)
+
+    params: list[Any] = []
+    set_clauses = [f"{col} = {bind_param(params, value)}" for col, value in filtered.items()]
+    id_placeholder = bind_param(params, vendor_id)
+
+    sql = f"""
+        UPDATE vendors
+        SET {", ".join(set_clauses)}
+        WHERE id = {id_placeholder}
+        RETURNING
+            id, name, slug, type, address,
+            ST_Y(location::geometry) AS lat,
+            ST_X(location::geometry) AS lng,
+            phone, website, image_url, is_verified, is_featured, created_at;
+    """
+    row = await fetchrow(sql, *params)
+    if not row:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    return _row_to_vendor_summary(dict(row))
+
+
 async def update_vendor_image(vendor_id: UUID, image_url: str) -> dict[str, Any]:
     """Update a vendor's listing image and return the summary record."""
 

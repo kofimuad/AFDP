@@ -198,6 +198,19 @@ export const uploadVendorImage = async (vendorId: string, file: File): Promise<V
   return res.data
 }
 
+export interface UpdateVendorInput {
+  name?: string
+  type?: 'restaurant' | 'grocery_store'
+  address?: string
+  phone?: string | null
+  website?: string | null
+}
+
+export const updateVendor = async (vendorId: string, input: UpdateVendorInput): Promise<Vendor> => {
+  const { data } = await api.patch<Vendor>(`/vendors/${vendorId}`, input)
+  return data
+}
+
 export const getAssetUrl = (path: string | null | undefined): string | null => {
   if (!path) return null
   if (/^https?:\/\//i.test(path)) return path
