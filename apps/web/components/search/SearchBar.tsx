@@ -1,5 +1,6 @@
 "use client";
 
+import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Input } from "@/components/ui/input";
@@ -7,11 +8,12 @@ import { Input } from "@/components/ui/input";
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
+  onSubmit?: (value: string) => void;
   isLoading?: boolean;
   mode?: "hero" | "compact";
 }
 
-export function SearchBar({ value, onChange, isLoading = false, mode = "compact" }: SearchBarProps) {
+export function SearchBar({ value, onChange, onSubmit, isLoading = false, mode = "compact" }: SearchBarProps) {
   const [localValue, setLocalValue] = useState(value);
 
   useEffect(() => {
@@ -31,12 +33,26 @@ export function SearchBar({ value, onChange, isLoading = false, mode = "compact"
     [mode]
   );
 
+  const buttonSize = mode === "hero" ? "h-14 w-14" : "h-11 w-11";
+  const iconSize = mode === "hero" ? 22 : 18;
+
+  const triggerSearch = () => {
+    onChange(localValue);
+    onSubmit?.(localValue);
+  };
+
   return (
     <div className={wrapperClassName}>
       <div className="flex items-center gap-2">
         <Input
           value={localValue}
           onChange={(event) => setLocalValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              triggerSearch();
+            }
+          }}
           placeholder="Search Jollof Rice, Egusi, Injera..."
           className={mode === "hero" ? "h-14 text-base" : "h-11"}
         />
@@ -50,7 +66,23 @@ export function SearchBar({ value, onChange, isLoading = false, mode = "compact"
             Clear
           </button>
         ) : null}
-        {isLoading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-primary)]" /> : null}
+        <button
+          type="submit"
+          onClick={triggerSearch}
+          disabled={isLoading}
+          aria-label="Search"
+          className={`flex ${buttonSize} shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white shadow-[var(--shadow-sm)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70`}
+        >
+          {isLoading ? (
+            <span
+              className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white"
+              role="status"
+              aria-label="Searching"
+            />
+          ) : (
+            <Search size={iconSize} aria-hidden="true" />
+          )}
+        </button>
       </div>
     </div>
   );
