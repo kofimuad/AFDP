@@ -118,7 +118,14 @@ export function CinematicHero() {
           />
         ) : null}
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 sm:hidden"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.85) 100%)"
+          }}
+        />
+        <div
+          className="absolute inset-0 hidden sm:block"
           style={{
             background:
               "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.75) 100%)"
@@ -126,7 +133,7 @@ export function CinematicHero() {
         />
       </div>
 
-      <div className="pointer-events-none absolute inset-0 z-10">
+      <div className="pointer-events-none absolute inset-0 z-10 hidden sm:block">
         {floatingPositions.map((entry) => (
           <motion.span
             key={entry.item}
@@ -154,8 +161,8 @@ export function CinematicHero() {
         transition={{ duration: 0.7, ease: "easeOut" }}
       >
         <Logo variant="light" />
-        <h1 className="display-font mt-6 text-5xl leading-tight text-[var(--color-text-inverse)] md:text-7xl">Discover African Food Near You.</h1>
-        <p className="mt-4 max-w-2xl text-lg text-white/75">
+        <h1 className="display-font mt-6 text-3xl leading-tight text-[var(--color-text-inverse)] sm:text-5xl md:text-7xl">Discover African Food Near You.</h1>
+        <p className="mt-4 hidden max-w-2xl text-lg text-white/75 sm:block">
           Find restaurants, ingredients, and recipes — all in one place.
         </p>
 
