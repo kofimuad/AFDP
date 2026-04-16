@@ -56,6 +56,16 @@ function IngredientAccordion({
 export function SearchPanel({ data, isLoading, activeVendorId, onVendorSelect, prefetchedVendors = [] }: SearchPanelProps) {
   const restaurants = useMemo(() => (data?.restaurants?.length ? data.restaurants : prefetchedVendors), [data, prefetchedVendors]);
 
+  const resultCount = useMemo(() => {
+    if (!data) return 0;
+    const ids = new Set<string>();
+    for (const r of data.restaurants) ids.add(r.id);
+    for (const bundle of data.ingredients) {
+      for (const s of bundle.stores) ids.add(s.id);
+    }
+    return ids.size;
+  }, [data]);
+
   const hasData = Boolean(
     (data && (data.restaurants.length > 0 || data.ingredients.length > 0 || data.food_match)) || prefetchedVendors.length > 0
   );
@@ -75,6 +85,12 @@ export function SearchPanel({ data, isLoading, activeVendorId, onVendorSelect, p
 
   return (
     <div className="space-y-6">
+      {data ? (
+        <p className="text-sm font-medium text-[var(--color-text-muted)]">
+          {resultCount} {resultCount === 1 ? "result" : "results"} found near you
+        </p>
+      ) : null}
+
       {data?.food_match ? (
         <section className="rounded-[var(--radius-lg)] bg-[var(--color-primary)] p-5 text-[var(--color-text-inverse)]">
           <p className="display-font text-2xl">{data.food_match.name}</p>
