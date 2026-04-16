@@ -457,6 +457,103 @@ async def add_vendor_dish(
     }
 
 
+async def find_or_create_ingredient(
+    name: str,
+    image_url: str | None = None,
+) -> dict[str, Any]:
+    """Look up an ingredient by case-insensitive name; create it if missing."""
+
+    existing = await fetchrow(
+        "SELECT id, name, slug, image_url FROM ingredients WHERE lower(name) = lower($1) LIMIT 1;",
+        name.strip(),
+    )
+    if existing:
+        row = dict(existing)
+        if image_url and not row.get("image_url"):
+            updated = await fetchrow(
+                "UPDATE ingredients SET image_url = $2 WHERE id = $1 RETURNING id, name, slug, image_url;",
+                row["id"],
+                image_url,
+            )
+            if updated:
+                row = dict(updated)
+        return row
+
+    base_slug = slugify(name) or f"ingredient-{uuid4().hex[:8]}"
+    candidate = base_slug
+    for _ in range(10):
+        try:
+            row = await fetchrow(
+                """
+                INSERT INTO ingredients (id, name, slug, image_url)
+                VALUES (gen_random_uuid(), $1, $2, $3)
+                RETURNING id, name, slug, image_url;
+                """,
+                name.strip(),
+                candidate,
+                image_url,
+            )
+            if row:
+                return dict(row)
+        except asyncpg.UniqueViolationError:
+            candidate = f"{base_slug}-{uuid4().hex[:6]}"
+    raise HTTPException(status_code=500, detail="Unable to create ingredient")
+
+
+async def add_vendor_grocery(
+    vendor_id: UUID,
+    *,
+    name: str,
+    price: float | None,
+    available: bool,
+    image_url: str | None,
+) -> dict[str, Any]:
+    """Vendor-facing helper: ensure ingredient exists in catalog, attach to vendor."""
+
+    vendor = await fetchrow("SELECT id FROM vendors WHERE id = $1;", vendor_id)
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    ingredient = await find_or_create_ingredient(name=name, image_url=image_url)
+
+    existing = await fetchrow(
+        "SELECT id FROM vendor_items WHERE vendor_id = $1 AND ingredient_id = $2;",
+        vendor_id,
+        ingredient["id"],
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Item already on this vendor")
+
+    row = await fetchrow(
+        """
+        INSERT INTO vendor_items (id, vendor_id, food_id, ingredient_id, price, available)
+        VALUES (gen_random_uuid(), $1, NULL, $2, $3, $4)
+        RETURNING id, vendor_id, ingredient_id, price, available;
+        """,
+        vendor_id,
+        ingredient["id"],
+        price,
+        available,
+    )
+    assert row is not None
+    return {
+        "id": row["id"],
+        "vendor_id": row["vendor_id"],
+        "food_id": None,
+        "ingredient_id": row["ingredient_id"],
+        "food": None,
+        "ingredient": {
+            "id": ingredient["id"],
+            "name": ingredient["name"],
+            "slug": ingredient["slug"],
+            "image_url": ingredient.get("image_url"),
+        },
+        "price": float(row["price"]) if row["price"] is not None else None,
+        "available": row["available"],
+        "item_type": "ingredient",
+    }
+
+
 async def remove_vendor_item(vendor_id: UUID, item_id: UUID) -> None:
     """Remove a vendor item by vendor and item identifier."""
 
@@ -479,21 +576,22 @@ async def update_vendor_item(
     )
     if not item_row:
         raise HTTPException(status_code=404, detail="Vendor item not found")
-    if item_row["food_id"] is None:
-        raise HTTPException(status_code=400, detail="Only food items can be edited via this endpoint")
 
-    food_updates: dict[str, Any] = {}
+    catalog_table = "foods" if item_row["food_id"] is not None else "ingredients"
+    catalog_id = item_row["food_id"] if item_row["food_id"] is not None else item_row["ingredient_id"]
+
+    catalog_updates: dict[str, Any] = {}
     if "name" in fields and fields["name"] is not None:
-        food_updates["name"] = str(fields["name"]).strip()
-    if "description" in fields:
-        food_updates["description"] = fields["description"]
+        catalog_updates["name"] = str(fields["name"]).strip()
+    if "description" in fields and catalog_table == "foods":
+        catalog_updates["description"] = fields["description"]
 
-    if food_updates:
+    if catalog_updates:
         params: list[Any] = []
-        set_clauses = [f"{col} = {bind_param(params, value)}" for col, value in food_updates.items()]
-        food_id_placeholder = bind_param(params, item_row["food_id"])
+        set_clauses = [f"{col} = {bind_param(params, value)}" for col, value in catalog_updates.items()]
+        catalog_id_placeholder = bind_param(params, catalog_id)
         await execute(
-            f"UPDATE foods SET {', '.join(set_clauses)} WHERE id = {food_id_placeholder};",
+            f"UPDATE {catalog_table} SET {', '.join(set_clauses)} WHERE id = {catalog_id_placeholder};",
             *params,
         )
 

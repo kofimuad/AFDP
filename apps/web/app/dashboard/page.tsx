@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BarChart2, Eye, LayoutDashboard, MousePointer, Search, Settings, Shield, Store } from "lucide-react";
-import { addVendorDish, removeVendorItem, updateVendor, updateVendorItem, uploadVendorImage, getMyVendor } from '@/lib/api';
+import { addVendorDish, addVendorGrocery, removeVendorItem, updateVendor, updateVendorItem, uploadVendorImage, getMyVendor } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useToast } from '@/lib/store/toastStore';
 import type { Vendor, VendorItem } from '@/types';
@@ -156,7 +156,14 @@ function DashboardPageInner() {
                   </div>
                 ) : (
                   <ul className="mt-4 space-y-8">
-                    {vendors.map((vendor) => (
+                    {vendors.map((vendor) => {
+                      const isGrocery = vendor.type === "grocery_store";
+                      const itemsLabel = isGrocery ? "Items" : "Dishes";
+                      const itemSingular = isGrocery ? "item" : "dish";
+                      const visibleItems = (vendor.vendor_items || []).filter((item: VendorItem) =>
+                        isGrocery ? item.item_type === "ingredient" : item.item_type === "food"
+                      );
+                      return (
                       <li key={vendor.id} className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-sm)]">
                         <div className="flex items-center gap-4 mb-4">
                           <div className="h-16 w-16 rounded-full bg-[var(--color-surface-hover)] overflow-hidden">
@@ -169,21 +176,21 @@ function DashboardPageInner() {
                           <div>
                             <div className="font-semibold text-lg text-[var(--color-text-primary)]">{vendor.name}</div>
                             <div className="text-sm text-[var(--color-text-muted)]">{vendor.address}</div>
-                            <div className="text-xs text-[var(--color-text-muted)] mt-1">{vendor.type}</div>
+                            <div className="text-xs text-[var(--color-text-muted)] mt-1">{isGrocery ? "Grocery Store" : "Restaurant"}</div>
                           </div>
                         </div>
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold text-md text-[var(--color-text-primary)]">Dishes</h3>
+                          <h3 className="font-semibold text-md text-[var(--color-text-primary)]">{itemsLabel}</h3>
                           <Button
                             onClick={() => {
                               setAddDishVendorId(vendor.id);
                               setShowAddDish(true);
                             }}
                           >
-                            Add Dish
+                            {isGrocery ? "Add Item" : "Add Dish"}
                           </Button>
                         </div>
-                                    <Modal open={showAddDish} onClose={() => setShowAddDish(false)} title="Add Dish">
+                                    <Modal open={showAddDish} onClose={() => setShowAddDish(false)} title={isGrocery ? "Add Item" : "Add Dish"}>
                                       <form
                                         className="space-y-4"
                                         onSubmit={async e => {
@@ -193,13 +200,21 @@ function DashboardPageInner() {
                                           setDishError(null);
                                           try {
                                             const priceNum = dishForm.price ? parseFloat(dishForm.price) : undefined;
-                                            const item = await addVendorDish(addDishVendorId, {
-                                              name: dishForm.name.trim(),
-                                              description: dishForm.description.trim() || undefined,
-                                              price: Number.isFinite(priceNum as number) ? priceNum : undefined,
-                                              available: true,
-                                              file: dishForm.image_file,
-                                            });
+                                            const priceArg = Number.isFinite(priceNum as number) ? priceNum : undefined;
+                                            const item = isGrocery
+                                              ? await addVendorGrocery(addDishVendorId, {
+                                                  name: dishForm.name.trim(),
+                                                  price: priceArg,
+                                                  available: true,
+                                                  file: dishForm.image_file,
+                                                })
+                                              : await addVendorDish(addDishVendorId, {
+                                                  name: dishForm.name.trim(),
+                                                  description: dishForm.description.trim() || undefined,
+                                                  price: priceArg,
+                                                  available: true,
+                                                  file: dishForm.image_file,
+                                                });
                                             setVendors(vendors => vendors.map(v => v.id === addDishVendorId ? {
                                               ...v,
                                               vendor_items: [...v.vendor_items, item as VendorItem],
@@ -207,25 +222,27 @@ function DashboardPageInner() {
                                             setShowAddDish(false);
                                             setDishForm({ name: "", description: "", image_file: null, image_preview: "", ingredients: "", price: "" });
                                           } catch (err: any) {
-                                            setDishError(err?.response?.data?.detail || "Failed to add dish");
+                                            setDishError(err?.response?.data?.detail || `Failed to add ${itemSingular}`);
                                           } finally {
                                             setSavingDish(false);
                                           }
                                         }}
                                       >
                                         <Input
-                                          placeholder="Dish Name"
+                                          placeholder={isGrocery ? "Item Name" : "Dish Name"}
                                           value={dishForm.name}
                                           onChange={e => setDishForm(f => ({ ...f, name: e.target.value }))}
                                           required
                                         />
-                                        <Input
-                                          placeholder="Description"
-                                          value={dishForm.description}
-                                          onChange={e => setDishForm(f => ({ ...f, description: e.target.value }))}
-                                        />
+                                        {!isGrocery && (
+                                          <Input
+                                            placeholder="Description"
+                                            value={dishForm.description}
+                                            onChange={e => setDishForm(f => ({ ...f, description: e.target.value }))}
+                                          />
+                                        )}
                                         <div>
-                                          <label className="block text-sm font-medium mb-1">Dish Image</label>
+                                          <label className="block text-sm font-medium mb-1">{isGrocery ? "Item Image" : "Dish Image"}</label>
                                           <input
                                             type="file"
                                             accept="image/*"
@@ -254,32 +271,38 @@ function DashboardPageInner() {
                                           value={dishForm.price}
                                           onChange={e => setDishForm(f => ({ ...f, price: e.target.value }))}
                                         />
-                                        <Input
-                                          placeholder="Ingredients (comma separated)"
-                                          value={dishForm.ingredients}
-                                          onChange={e => setDishForm(f => ({ ...f, ingredients: e.target.value }))}
-                                        />
+                                        {!isGrocery && (
+                                          <Input
+                                            placeholder="Ingredients (comma separated)"
+                                            value={dishForm.ingredients}
+                                            onChange={e => setDishForm(f => ({ ...f, ingredients: e.target.value }))}
+                                          />
+                                        )}
                                         {dishError && <p className="text-sm text-red-500">{dishError}</p>}
                                         <div className="flex justify-end">
-                                          <Button type="submit" disabled={savingDish}>{savingDish ? "Saving…" : "Add Dish"}</Button>
+                                          <Button type="submit" disabled={savingDish}>{savingDish ? "Saving…" : isGrocery ? "Add Item" : "Add Dish"}</Button>
                                         </div>
                                       </form>
                                     </Modal>
-                        {vendor.vendor_items && vendor.vendor_items.length > 0 ? (
+                        {visibleItems.length > 0 ? (
                           <ul className="space-y-2">
-                            {vendor.vendor_items.filter((item: VendorItem) => item.item_type === "food").map((item: VendorItem) => (
+                            {visibleItems.map((item: VendorItem) => {
+                              const catalog = isGrocery ? item.ingredient : item.food;
+                              return (
                               <li key={item.id} className="flex items-center justify-between border-b border-dashed border-[var(--color-border)] py-2">
                                 <div className="flex items-center gap-3">
-                                  {item.food?.image_url ? (
-                                    <img src={item.food.image_url} alt={item.food.name} className="h-10 w-10 rounded object-cover" />
+                                  {catalog?.image_url ? (
+                                    <img src={catalog.image_url} alt={catalog.name} className="h-10 w-10 rounded object-cover" />
                                   ) : (
                                     <div className="h-10 w-10 rounded bg-[var(--color-surface-hover)] flex items-center justify-center text-lg font-bold text-[var(--color-text-muted)]">
-                                      {item.food?.name?.[0]}
+                                      {catalog?.name?.[0]}
                                     </div>
                                   )}
                                   <div>
-                                    <div className="font-medium text-[var(--color-text-primary)]">{item.food?.name}</div>
-                                    <div className="text-xs text-[var(--color-text-muted)]">{item.food?.description}</div>
+                                    <div className="font-medium text-[var(--color-text-primary)]">{catalog?.name}</div>
+                                    {!isGrocery && (
+                                      <div className="text-xs text-[var(--color-text-muted)]">{item.food?.description}</div>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -289,7 +312,7 @@ function DashboardPageInner() {
                                     onClick={() => {
                                       setEditingItem({ vendorId: vendor.id, item });
                                       setEditForm({
-                                        name: item.food?.name || "",
+                                        name: catalog?.name || "",
                                         description: item.food?.description || "",
                                         price: item.price != null ? String(item.price) : "",
                                       });
@@ -303,7 +326,7 @@ function DashboardPageInner() {
                                     className="rounded bg-red-500 px-2 py-1 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-60"
                                     onClick={async () => {
                                       if (removingItemId) return;
-                                      const ok = window.confirm(`Remove "${item.food?.name ?? "this dish"}" from your menu?`);
+                                      const ok = window.confirm(`Remove "${catalog?.name ?? `this ${itemSingular}`}" from your ${isGrocery ? "inventory" : "menu"}?`);
                                       if (!ok) return;
                                       setRemovingItemId(item.id);
                                       try {
@@ -315,9 +338,9 @@ function DashboardPageInner() {
                                               : v
                                           )
                                         );
-                                        showToast("Dish removed", "success");
+                                        showToast(`${isGrocery ? "Item" : "Dish"} removed`, "success");
                                       } catch (err: any) {
-                                        showToast(err?.response?.data?.detail || "Failed to remove dish", "error");
+                                        showToast(err?.response?.data?.detail || `Failed to remove ${itemSingular}`, "error");
                                       } finally {
                                         setRemovingItemId(null);
                                       }
@@ -327,25 +350,32 @@ function DashboardPageInner() {
                                   </button>
                                 </div>
                               </li>
-                            ))}
+                              );
+                            })}
                           </ul>
                         ) : (
-                          <div className="text-xs text-[var(--color-text-muted)]">No dishes yet.</div>
+                          <div className="text-xs text-[var(--color-text-muted)]">No {itemsLabel.toLowerCase()} yet.</div>
                         )}
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
               </section>
             )}
 
-            <Modal open={editingItem !== null} onClose={() => setEditingItem(null)} title="Edit Dish">
+            <Modal
+              open={editingItem !== null}
+              onClose={() => setEditingItem(null)}
+              title={editingItem?.item.item_type === "ingredient" ? "Edit Item" : "Edit Dish"}
+            >
               <form
                 className="space-y-4"
                 onSubmit={async (e) => {
                   e.preventDefault();
                   if (!editingItem || savingEdit) return;
                   setSavingEdit(true);
+                  const isIngredient = editingItem.item.item_type === "ingredient";
                   try {
                     const priceNum = editForm.price.trim() ? parseFloat(editForm.price) : null;
                     if (editForm.price.trim() && !Number.isFinite(priceNum as number)) {
@@ -355,7 +385,7 @@ function DashboardPageInner() {
                     }
                     const updated = await updateVendorItem(editingItem.vendorId, editingItem.item.id, {
                       name: editForm.name.trim(),
-                      description: editForm.description.trim() || null,
+                      ...(isIngredient ? {} : { description: editForm.description.trim() || null }),
                       price: priceNum,
                     });
                     setVendors((prev) =>
@@ -368,30 +398,32 @@ function DashboardPageInner() {
                           : v
                       )
                     );
-                    showToast("Dish updated", "success");
+                    showToast(`${isIngredient ? "Item" : "Dish"} updated`, "success");
                     setEditingItem(null);
                   } catch (err: any) {
-                    showToast(err?.response?.data?.detail || "Failed to update dish", "error");
+                    showToast(err?.response?.data?.detail || `Failed to update ${isIngredient ? "item" : "dish"}`, "error");
                   } finally {
                     setSavingEdit(false);
                   }
                 }}
               >
                 <div>
-                  <label className="block text-sm font-medium mb-1">Dish Name</label>
+                  <label className="block text-sm font-medium mb-1">{editingItem?.item.item_type === "ingredient" ? "Item Name" : "Dish Name"}</label>
                   <Input
                     value={editForm.name}
                     onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Description</label>
-                  <Input
-                    value={editForm.description}
-                    onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
-                  />
-                </div>
+                {editingItem?.item.item_type !== "ingredient" && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Description</label>
+                    <Input
+                      value={editForm.description}
+                      onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium mb-1">Price</label>
                   <Input

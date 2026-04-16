@@ -11,6 +11,7 @@ from app.services.auth_service import get_optional_user, require_vendor
 from app.services.cloudinary_service import upload_image
 from app.services.vendor_service import (
     add_vendor_dish,
+    add_vendor_grocery,
     add_vendor_item,
     get_vendor_detail,
     get_vendor_by_id,
@@ -276,6 +277,55 @@ async def add_vendor_dish_route(
             id,
             name=name,
             description=description,
+            price=price,
+            available=available,
+            image_url=image_url,
+        )
+    )
+
+
+@router.post(
+    "/{id}/groceries",
+    response_model=VendorItemOut,
+    responses={
+        200: {"description": "Created grocery item", "content": {"application/json": {"example": VENDOR_ITEM_EXAMPLE}}},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+    },
+)
+async def add_vendor_grocery_route(
+    id: UUID,
+    name: str = Form(..., min_length=1),
+    price: float | None = Form(default=None),
+    available: bool = Form(default=True),
+    file: UploadFile | None = File(default=None),
+    current_user: dict = Depends(require_vendor),
+) -> VendorItemOut:
+    """Add a grocery item to a vendor: finds-or-creates an ingredient in the catalog, uploads image."""
+
+    if current_user["role"] != "admin" and current_user.get("vendor_id") != str(id):
+        raise HTTPException(status_code=403, detail="Not authorized for this vendor")
+
+    image_url: str | None = None
+    if file is not None:
+        content_type = (file.content_type or "").lower()
+        if content_type and content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=415, detail="Unsupported image type")
+        contents = await file.read()
+        if contents:
+            if len(contents) > MAX_IMAGE_BYTES:
+                raise HTTPException(status_code=413, detail="Image must be 5MB or smaller")
+            try:
+                from uuid import uuid4 as _uuid4
+                image_url = await upload_image(contents, folder="afdp/ingredients", public_id=_uuid4().hex)
+            except Exception as exc:
+                raise HTTPException(status_code=502, detail="Image upload failed") from exc
+
+    return VendorItemOut.model_validate(
+        await add_vendor_grocery(
+            id,
+            name=name,
             price=price,
             available=available,
             image_url=image_url,
