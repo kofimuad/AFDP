@@ -8,6 +8,12 @@ from app.core.redis import get_redis
 from app.services.cache_service import get_cached_response, set_cached_response
 from app.services.geo_service import fetch_vendors_within_radius
 
+# When a radius-bounded search returns nothing, we widen to a global radius
+# (20,000 km covers the whole planet) and cap the result set so users in
+# under-covered regions still see the nearest matches rather than an empty page.
+_GLOBAL_FALLBACK_RADIUS_KM = 20_000.0
+_GLOBAL_FALLBACK_LIMIT = 10
+
 
 def build_search_cache_key(q: str, lat: float, lng: float, radius_km: float) -> str:
     """Build cache key for search payload with rounded coordinates."""
@@ -44,7 +50,10 @@ async def find_ingredients_for_food(food_id: str) -> list[dict[str, Any]]:
 
 
 async def find_food_restaurants(food_id: str, lat: float, lng: float, radius_km: float, vendor_type: str | None) -> list[dict]:
-    """Find restaurants offering a specific food within a radius."""
+    """Find restaurants offering a specific food within a radius.
+
+    Falls back to the nearest matches worldwide (capped) if nothing is in range.
+    """
 
     where_sql = "v.id IN (SELECT vi.vendor_id FROM vendor_items vi WHERE vi.food_id = $4)"
     where_args: tuple[Any, ...] = (food_id,)
@@ -53,7 +62,12 @@ async def find_food_restaurants(food_id: str, lat: float, lng: float, radius_km:
         where_sql += " AND v.type = $5"
         where_args = (food_id, vendor_type)
 
-    return await fetch_vendors_within_radius(where_sql, where_args, lat, lng, radius_km)
+    results = await fetch_vendors_within_radius(where_sql, where_args, lat, lng, radius_km)
+    if not results and radius_km < _GLOBAL_FALLBACK_RADIUS_KM:
+        results = await fetch_vendors_within_radius(
+            where_sql, where_args, lat, lng, _GLOBAL_FALLBACK_RADIUS_KM, limit=_GLOBAL_FALLBACK_LIMIT
+        )
+    return results
 
 
 async def find_stores_for_ingredient(
@@ -63,7 +77,10 @@ async def find_stores_for_ingredient(
     radius_km: float,
     vendor_type: str | None,
 ) -> list[dict]:
-    """Find stores carrying an ingredient within a radius."""
+    """Find stores carrying an ingredient within a radius.
+
+    Falls back to the nearest matches worldwide (capped) if nothing is in range.
+    """
 
     where_sql = "v.id IN (SELECT vi.vendor_id FROM vendor_items vi WHERE vi.ingredient_id = $4)"
     where_args: tuple[Any, ...] = (ingredient_id,)
@@ -72,7 +89,12 @@ async def find_stores_for_ingredient(
         where_sql += " AND v.type = $5"
         where_args = (ingredient_id, vendor_type)
 
-    return await fetch_vendors_within_radius(where_sql, where_args, lat, lng, radius_km)
+    results = await fetch_vendors_within_radius(where_sql, where_args, lat, lng, radius_km)
+    if not results and radius_km < _GLOBAL_FALLBACK_RADIUS_KM:
+        results = await fetch_vendors_within_radius(
+            where_sql, where_args, lat, lng, _GLOBAL_FALLBACK_RADIUS_KM, limit=_GLOBAL_FALLBACK_LIMIT
+        )
+    return results
 
 
 async def find_matching_vendors_by_name(q: str, lat: float, lng: float, radius_km: float, vendor_type: str | None) -> list[dict]:

@@ -15,9 +15,15 @@ async def fetch_vendors_within_radius(
     lat: float,
     lng: float,
     radius_km: float,
+    limit: int | None = None,
 ) -> list[dict]:
-    """Return vendors that match a predicate and are within radius of coordinates."""
+    """Return vendors that match a predicate and are within radius of coordinates.
 
+    If ``limit`` is provided the query also enforces ``LIMIT n`` after ordering
+    by ascending distance.
+    """
+
+    limit_sql = f"LIMIT {int(limit)}" if limit and limit > 0 else ""
     sql = f"""
         SELECT
             v.id,
@@ -42,7 +48,8 @@ async def fetch_vendors_within_radius(
                 ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
                 $3
             )
-        ORDER BY distance_km ASC;
+        ORDER BY distance_km ASC
+        {limit_sql};
     """
     rows = await fetch(sql, lng, lat, meters_from_km(radius_km), *where_args)
     return [dict(row) for row in rows]
