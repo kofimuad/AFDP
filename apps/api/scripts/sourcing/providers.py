@@ -70,12 +70,12 @@ class GooglePlacesProvider(Provider):
         }
 
         results: list[VendorRecord] = []
-        for _ in range(3):  # up to 3 pages → 60 places per (query, city)
+        for _ in range(3):  # up to 3 pages -> 60 places per (query, city)
             try:
                 r = await client.post(self.URL, headers=headers, json=body, timeout=30.0)
                 r.raise_for_status()
             except httpx.HTTPError as e:
-                print(f"[google] {city['name']} / {query} → error: {e}")
+                print(f"[google] {city['name']} / {query} -> error: {e}")
                 break
             data = r.json()
             for p in data.get("places", []):
@@ -145,7 +145,7 @@ class YelpFusionProvider(Provider):
                 r = await client.get(self.URL, params=params, headers=headers, timeout=30.0)
                 r.raise_for_status()
             except httpx.HTTPError as e:
-                print(f"[yelp] {city['name']} / {query} → error: {e}")
+                print(f"[yelp] {city['name']} / {query} -> error: {e}")
                 break
             data = r.json()
             businesses = data.get("businesses") or []
@@ -209,7 +209,7 @@ class FoursquareProvider(Provider):
             r = await client.get(self.URL, params=params, headers=headers, timeout=30.0)
             r.raise_for_status()
         except httpx.HTTPError as e:
-            print(f"[foursquare] {city['name']} / {query} → error: {e}")
+            print(f"[foursquare] {city['name']} / {query} -> error: {e}")
             return []
 
         data = r.json()
@@ -317,7 +317,7 @@ class OSMOverpassProvider(Provider):
             r = await client.post(self.URL, data={"data": overpass}, timeout=90.0)
             r.raise_for_status()
         except httpx.HTTPError as e:
-            print(f"[osm] {city['name']} / {query} → error: {e}")
+            print(f"[osm] {city['name']} / {query} -> error: {e}")
             return []
 
         data = r.json()

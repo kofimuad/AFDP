@@ -64,12 +64,12 @@ async def run_sourcing(
                     try:
                         items = await p.search(client, query, city, vtype)
                     except Exception as e:
-                        print(f"[{p.name}] {city['name']} / {query} → error: {e}")
+                        print(f"[{p.name}] {city['name']} / {query} -> error: {e}")
                         items = []
                     added = _merge(dedup, items)
                     print(
                         f"[{p.name}] {city['name']} / {query} ({vtype}) "
-                        f"→ {len(items)} results, +{added} new (total: {len(dedup)})"
+                        f"-> {len(items)} results, +{added} new (total: {len(dedup)})"
                     )
                     if target and len(dedup) >= target:
                         print(f"\nReached target of {target} — stopping early.")
