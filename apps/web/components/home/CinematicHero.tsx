@@ -166,24 +166,25 @@ export function CinematicHero() {
           Find restaurants, ingredients, and recipes — all in one place.
         </p>
 
-        <form
-          className="mt-8 w-full"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const q = query.trim();
-            if (!q) return;
-            router.push(`/search?q=${encodeURIComponent(q)}`);
-          }}
-        >
+        <div className="mt-8 w-full">
           <div
             className="mx-auto w-full max-w-[600px] overflow-hidden rounded-[var(--radius-xl)] border-l-4 border-l-[var(--color-primary)] transition-shadow focus-within:shadow-[0_0_0_2px_rgba(200,82,42,0.5),0_8px_32px_rgba(0,0,0,0.5)]"
             style={{
               boxShadow: "0 0 0 1px rgba(200,82,42,0.3), 0 8px 32px rgba(0,0,0,0.4)"
             }}
           >
-            <SearchBar value={query} onChange={setQuery} mode="hero" />
+            <SearchBar
+              value={query}
+              onChange={setQuery}
+              onSubmit={(q) => {
+                const trimmed = q.trim();
+                if (!trimmed) return;
+                router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+              }}
+              mode="hero"
+            />
           </div>
-        </form>
+        </div>
       </motion.div>
 
     </section>

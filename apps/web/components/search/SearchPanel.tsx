@@ -35,7 +35,7 @@ function IngredientAccordion({
   return (
     <details className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]">
       <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[var(--color-text-primary)]">{bundle.ingredient.name}</summary>
-      <div className="grid gap-3 border-t border-[var(--color-border)] p-3">
+      <div className="grid gap-4 border-t border-[var(--color-border)] p-4 xl:grid-cols-2">
         {bundle.stores.length === 0 ? (
           <p className="text-sm text-[var(--color-text-muted)]">No nearby stores found for this ingredient.</p>
         ) : (
@@ -100,7 +100,7 @@ export function SearchPanel({ data, isLoading, activeVendorId, onVendorSelect, p
 
       <section className="space-y-3">
         <h3 className="display-font text-xl text-[var(--color-text-primary)]">Restaurants serving this</h3>
-        <div className="grid gap-3">
+        <div className="grid gap-4 xl:grid-cols-2">
           {restaurants.length > 0 ? (
             restaurants.map((vendor) => (
               <ResultCard key={vendor.id} vendor={vendor} active={activeVendorId === vendor.id} onClick={() => onVendorSelect?.(vendor)} />

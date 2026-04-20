@@ -125,8 +125,8 @@ function SearchPageContent() {
         <SearchBar value={query} onChange={setQuery} isLoading={panelLoading} mode="compact" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
-        <section className="order-2 lg:order-1">
+      <div className="grid gap-6 lg:grid-cols-[5fr_7fr]">
+        <section className="order-2 lg:sticky lg:top-[140px] lg:order-1 lg:self-start">
           <MapView vendors={vendors} onVendorClick={handleVendorSelect} />
         </section>
 
