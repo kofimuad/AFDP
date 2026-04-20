@@ -5,10 +5,11 @@
 @tailwind utilities;
 
 :root {
-  /* Backgrounds */
-  --color-bg: #fafaf8;
+  /* Backgrounds — clean white surfaces with very light grey page */
+  --color-bg: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-hover: #f5f2ee;
+  --color-surface-hover: #f3f3f3;
+  --color-surface-muted: #f7f7f7;
 
   /* Dark contrast */
   --color-dark: #0f0e0d;
@@ -25,18 +26,19 @@
   --color-grocery-light: #e0f0e8;
 
   /* Text */
-  --color-text-primary: #0f0e0d;
-  --color-text-muted: #6b6560;
-  --color-text-inverse: #fafaf8;
+  --color-text-primary: #191919;
+  --color-text-muted: #6b6b6b;
+  --color-text-inverse: #ffffff;
 
-  /* Borders */
-  --color-border: #e8e4df;
-  --color-border-strong: #d0cac3;
+  /* Borders — subtle, cards lean on shadows over borders */
+  --color-border: #ececec;
+  --color-border-strong: #d6d6d6;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(15, 14, 13, 0.08);
-  --shadow-md: 0 4px 16px rgba(15, 14, 13, 0.1);
-  --shadow-lg: 0 8px 32px rgba(15, 14, 13, 0.14);
+  /* Shadows — stronger, more elevated for image-forward cards */
+  --shadow-sm: 0 2px 6px rgba(17, 17, 17, 0.06);
+  --shadow-md: 0 6px 20px rgba(17, 17, 17, 0.1);
+  --shadow-lg: 0 16px 40px rgba(17, 17, 17, 0.14);
+  --shadow-xl: 0 24px 56px rgba(17, 17, 17, 0.18);
 
   /* Spacing scale */
   --space-1: 4px;
@@ -47,6 +49,10 @@
   --space-8: 32px;
   --space-12: 48px;
   --space-16: 64px;
+
+  /* Card image heights */
+  --card-image-height: 168px;
+  --card-image-height-sm: 140px;
 
   /* Border radius */
   --radius-sm: 8px;
@@ -61,9 +67,11 @@
   --color-bg: #0f0e0d;
   --color-surface: #1a1917;
   --color-surface-hover: #242220;
+  --color-surface-muted: #1f1e1c;
   --color-dark: #fafaf8;
   --color-text-primary: #f5f5f4;
   --color-text-muted: #9ca3af;
+  --color-text-inverse: #ffffff;
   --color-border: #2a2826;
   --color-border-strong: #3a3835;
 }
@@ -101,4 +109,49 @@ a {
     linear-gradient(to right, rgba(200, 82, 42, 0.06) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(200, 82, 42, 0.06) 1px, transparent 1px);
   background-size: 36px 36px;
+}
+
+/* DoorDash-style image-forward cards */
+.dd-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.dd-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.dd-card-media {
+  position: relative;
+  width: 100%;
+  height: var(--card-image-height);
+  background-color: var(--color-surface-muted);
+  overflow: hidden;
+}
+
+.dd-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dd-card-media-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.dd-card-body {
+  padding: 18px 18px 20px;
 }
