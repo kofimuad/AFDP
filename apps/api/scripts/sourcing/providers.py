@@ -200,6 +200,7 @@ class YelpFusionProvider(Provider):
                         search_term=query,
                         country=city["country"],
                         city=city["name"],
+                        image_url=b.get("image_url") or None,
                     )
                 )
             if len(businesses) < 50:
