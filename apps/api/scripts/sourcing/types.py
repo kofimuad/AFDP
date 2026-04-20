@@ -18,6 +18,10 @@ class VendorRecord:
     search_term: str = ""
     country: str = ""
     city: str = ""
+    image_url: Optional[str] = None
+    # Google Places photo resource (e.g. "places/X/photos/Y"). Resolved to a
+    # real URL after dedup to avoid redundant Places Photos API calls.
+    google_photo_name: Optional[str] = None
 
     def dedup_key(self) -> str:
         return f"{self.name.strip().lower()}::{round(self.lat, 4)}::{round(self.lng, 4)}"

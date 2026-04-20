@@ -9,23 +9,22 @@ interface VendorCardProps {
 
 export function VendorCard({ vendor }: VendorCardProps) {
   return (
-    <Link
-      href={`/vendors/${vendor.slug}`}
-      className="block rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-sm)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
-    >
-      <div className="mb-3 flex h-32 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-hover)] text-sm text-[var(--color-text-muted)]">
+    <Link href={`/vendors/${vendor.slug}`} className="dd-card group">
+      <div className="dd-card-media">
         {vendor.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={vendor.image_url} alt={vendor.name} className="h-full w-full rounded-[var(--radius-md)] object-cover" />
+          <img src={vendor.image_url} alt={vendor.name} loading="lazy" />
         ) : (
-          "No image available"
+          <span className="dd-card-media-placeholder">No image available</span>
         )}
       </div>
-      <p className="display-font text-lg text-[var(--color-text-primary)]">{vendor.name}</p>
-      <p className="mt-1 text-sm text-[var(--color-text-muted)]">{vendor.address}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Badge variant={vendor.type === "grocery_store" ? "grocery" : "restaurant"} />
-        {vendor.is_verified ? <Badge variant="verified" /> : null}
+      <div className="dd-card-body">
+        <p className="display-font text-lg leading-tight text-[var(--color-text-primary)]">{vendor.name}</p>
+        <p className="mt-1 line-clamp-1 text-sm text-[var(--color-text-muted)]">{vendor.address}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Badge variant={vendor.type === "grocery_store" ? "grocery" : "restaurant"} />
+          {vendor.is_verified ? <Badge variant="verified" /> : null}
+        </div>
       </div>
     </Link>
   );
