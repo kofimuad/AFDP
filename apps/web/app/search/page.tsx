@@ -1,17 +1,23 @@
 "use client";
 
-import { X } from "lucide-react";
+import { ChevronDown, Map as MapIcon, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { MapView } from "@/components/map/MapView";
 import { SearchBar } from "@/components/search/SearchBar";
-import { SearchPanel } from "@/components/search/SearchPanel";
+import { SearchPanel, type SearchSort } from "@/components/search/SearchPanel";
 import { getVendors } from "@/lib/api";
 import { useGeolocation } from "@/lib/hooks/useGeolocation";
 import { useSearch } from "@/lib/hooks/useSearch";
 import { useMapStore } from "@/lib/store/mapStore";
 import type { VendorSummary, VendorType } from "@/types";
+
+const SORT_OPTIONS: { value: SearchSort; label: string }[] = [
+  { value: "nearest", label: "Nearest" },
+  { value: "popular", label: "Most Popular" },
+  { value: "recent", label: "Recently Added" }
+];
 
 type ChipFilter =
   | { kind: "all" }
@@ -40,6 +46,8 @@ function SearchPageContent() {
 
   const [prefilteredVendors, setPrefilteredVendors] = useState<VendorSummary[]>([]);
   const [isPrefilterLoading, setIsPrefilterLoading] = useState(false);
+  const [sort, setSort] = useState<SearchSort>("nearest");
+  const [isMapOpenMobile, setIsMapOpenMobile] = useState(false);
 
   const { lat, lng, isLoading: isGeoLoading } = useGeolocation();
   const { activeVendorId, setActiveVendorId, setViewport } = useMapStore();
@@ -115,6 +123,8 @@ function SearchPageContent() {
     return [];
   }, [activeTypeFilter, prefilteredVendors, query, searchVendors]);
 
+  const resultCount = vendors.length;
+
   const panelLoading = query.trim() ? isLoading || isFetching || isGeoLoading : isPrefilterLoading || isGeoLoading;
 
   const handleVendorSelect = (vendor: VendorSummary) => {
@@ -185,12 +195,8 @@ function SearchPageContent() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[5fr_7fr]">
-        <section className="order-2 lg:sticky lg:top-[140px] lg:order-1 lg:self-start">
-          <MapView vendors={vendors} onVendorClick={handleVendorSelect} />
-        </section>
-
-        <aside className="order-1 space-y-4 lg:order-2">
+      <div className="grid gap-6 lg:grid-cols-[7fr_5fr]">
+        <aside className="space-y-4">
           {activeTypeFilter ? (
             <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-primary-light)] px-3 py-2">
               <p className="text-sm font-medium text-[var(--color-primary)]">
@@ -207,14 +213,53 @@ function SearchPageContent() {
             </div>
           ) : null}
 
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-[var(--color-text-muted)]">
+              {resultCount} {resultCount === 1 ? "result" : "results"} near you
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsMapOpenMobile((open) => !open)}
+                aria-pressed={isMapOpenMobile}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] lg:hidden"
+              >
+                <MapIcon size={14} />
+                {isMapOpenMobile ? "Hide map" : "Show map"}
+              </button>
+              <label className="relative inline-flex items-center">
+                <span className="sr-only">Sort results</span>
+                <select
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value as SearchSort)}
+                  className="appearance-none rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] py-1.5 pl-3 pr-8 text-sm font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="pointer-events-none absolute right-2.5 text-[var(--color-text-muted)]" />
+              </label>
+            </div>
+          </div>
+
           <SearchPanel
             data={data}
             isLoading={panelLoading}
             activeVendorId={activeVendorId}
             onVendorSelect={handleVendorSelect}
             prefetchedVendors={!query.trim() ? prefilteredVendors : []}
+            sort={sort}
           />
         </aside>
+
+        <section
+          className={`${isMapOpenMobile ? "block" : "hidden"} lg:sticky lg:top-[140px] lg:block lg:self-start`}
+        >
+          <MapView vendors={vendors} onVendorClick={handleVendorSelect} />
+        </section>
       </div>
     </main>
   );

@@ -5,12 +5,38 @@ import { useMemo } from "react";
 import { ResultCard } from "@/components/search/ResultCard";
 import type { SearchIngredientBundle, SearchResponse, VendorSummary } from "@/types";
 
+export type SearchSort = "nearest" | "popular" | "recent";
+
 interface SearchPanelProps {
   data?: SearchResponse;
   isLoading: boolean;
   activeVendorId?: string | null;
   onVendorSelect?: (vendor: VendorSummary) => void;
   prefetchedVendors?: VendorSummary[];
+  sort?: SearchSort;
+}
+
+function sortVendors(vendors: VendorSummary[], sort: SearchSort): VendorSummary[] {
+  const copy = [...vendors];
+  if (sort === "nearest") {
+    return copy.sort((a, b) => {
+      const ad = a.distance_km ?? Number.POSITIVE_INFINITY;
+      const bd = b.distance_km ?? Number.POSITIVE_INFINITY;
+      return ad - bd;
+    });
+  }
+  if (sort === "recent") {
+    return copy.sort((a, b) => {
+      const at = a.created_at ? Date.parse(a.created_at) : 0;
+      const bt = b.created_at ? Date.parse(b.created_at) : 0;
+      return bt - at;
+    });
+  }
+  return copy.sort((a, b) => {
+    if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1;
+    if (a.is_verified !== b.is_verified) return a.is_verified ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
 }
 
 function LoadingSkeleton() {
@@ -53,18 +79,16 @@ function IngredientAccordion({
   );
 }
 
-export function SearchPanel({ data, isLoading, activeVendorId, onVendorSelect, prefetchedVendors = [] }: SearchPanelProps) {
-  const restaurants = useMemo(() => (data?.restaurants?.length ? data.restaurants : prefetchedVendors), [data, prefetchedVendors]);
+export function SearchPanel({ data, isLoading, activeVendorId, onVendorSelect, prefetchedVendors = [], sort = "nearest" }: SearchPanelProps) {
+  const restaurants = useMemo(() => {
+    const source = data?.restaurants?.length ? data.restaurants : prefetchedVendors;
+    return sortVendors(source, sort);
+  }, [data, prefetchedVendors, sort]);
 
-  const resultCount = useMemo(() => {
-    if (!data) return 0;
-    const ids = new Set<string>();
-    for (const r of data.restaurants) ids.add(r.id);
-    for (const bundle of data.ingredients) {
-      for (const s of bundle.stores) ids.add(s.id);
-    }
-    return ids.size;
-  }, [data]);
+  const ingredientBundles = useMemo(() => {
+    if (!data?.ingredients?.length) return [];
+    return data.ingredients.map((bundle) => ({ ...bundle, stores: sortVendors(bundle.stores, sort) }));
+  }, [data, sort]);
 
   const hasData = Boolean(
     (data && (data.restaurants.length > 0 || data.ingredients.length > 0 || data.food_match)) || prefetchedVendors.length > 0
@@ -85,12 +109,6 @@ export function SearchPanel({ data, isLoading, activeVendorId, onVendorSelect, p
 
   return (
     <div className="space-y-6">
-      {data ? (
-        <p className="text-sm font-medium text-[var(--color-text-muted)]">
-          {resultCount} {resultCount === 1 ? "result" : "results"} found near you
-        </p>
-      ) : null}
-
       {data?.food_match ? (
         <section className="rounded-[var(--radius-lg)] bg-[var(--color-primary)] p-5 text-[var(--color-text-inverse)]">
           <p className="display-font text-2xl">{data.food_match.name}</p>
@@ -111,11 +129,11 @@ export function SearchPanel({ data, isLoading, activeVendorId, onVendorSelect, p
         </div>
       </section>
 
-      {data?.ingredients?.length ? (
+      {ingredientBundles.length ? (
         <section className="space-y-3">
           <h3 className="display-font text-xl text-[var(--color-text-primary)]">Where to find ingredients</h3>
           <div className="space-y-3">
-            {data.ingredients.map((bundle) => (
+            {ingredientBundles.map((bundle) => (
               <IngredientAccordion key={bundle.ingredient.id} bundle={bundle} activeVendorId={activeVendorId} onVendorSelect={onVendorSelect} />
             ))}
           </div>
