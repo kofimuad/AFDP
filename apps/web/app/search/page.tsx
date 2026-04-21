@@ -213,8 +213,8 @@ function SearchPageContent() {
             </div>
           ) : null}
 
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-[var(--color-text-muted)]">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            <p className="whitespace-nowrap text-sm font-medium text-[var(--color-text-muted)]">
               {resultCount} {resultCount === 1 ? "result" : "results"} near you
             </p>
             <div className="flex items-center gap-2">
@@ -222,10 +222,10 @@ function SearchPageContent() {
                 type="button"
                 onClick={() => setIsMapOpenMobile((open) => !open)}
                 aria-pressed={isMapOpenMobile}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] lg:hidden"
+                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] lg:hidden"
               >
                 <MapIcon size={14} />
-                {isMapOpenMobile ? "Hide map" : "Show map"}
+                {isMapOpenMobile ? "Hide map" : "Map"}
               </button>
               <label className="relative inline-flex items-center">
                 <span className="sr-only">Sort results</span>

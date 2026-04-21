@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { LogOut, Menu, User, X } from "lucide-react";
+import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -18,9 +19,12 @@ export function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
   const hasHydrated = useHasHydrated();
+  const { theme, resolvedTheme } = useTheme();
   const [scrolled, setScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const isDark = hasHydrated && ((theme === "system" ? resolvedTheme : theme) === "dark");
 
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -261,7 +265,7 @@ export function NavBar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.15 }}
-            className="fixed left-0 right-0 top-16 z-40 border-b border-[var(--color-border)] bg-[var(--color-bg)] p-6 shadow-[var(--shadow-lg)] md:hidden"
+            className="fixed left-0 right-0 top-16 z-[60] border-b border-[var(--color-border)] bg-[var(--color-bg)] p-6 shadow-[var(--shadow-lg)] md:hidden"
           >
             <div className="space-y-2">
               {hasHydrated && !isAuthenticated && (
@@ -336,7 +340,9 @@ export function NavBar() {
               <div className="my-2 border-t border-[var(--color-border)]" />
 
               <div className="flex items-center justify-between px-1">
-                <span className="text-sm text-[var(--color-text-muted)]">Dark Mode</span>
+                <span className="text-sm text-[var(--color-text-muted)]">
+                  {isDark ? "Dark Mode" : "Light Mode"}
+                </span>
                 <ThemeToggle />
               </div>
             </div>

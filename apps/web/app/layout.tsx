@@ -7,6 +7,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 import "./globals.css";
 
+import { BottomNav } from "@/components/ui/BottomNav";
 import { Logo } from "@/components/ui/Logo";
 import { NavBar } from "@/components/ui/NavBar";
 import { ToastContainer } from "@/components/ui/Toast";
@@ -41,12 +42,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${fraunces.variable} ${inter.variable} min-h-full flex flex-col`} suppressHydrationWarning>
-      <body className="min-h-screen flex flex-col">
+      <body className="min-h-screen flex flex-col pb-16 md:pb-0">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <Providers>
             <NavBar />
             <MainWithConditionalPadding>{children}</MainWithConditionalPadding>
             <ToastContainer />
+            <BottomNav />
 
             <footer className="border-t border-white/10 bg-[#0F0E0D] px-4 py-10 text-white mt-auto">
               <div className="mx-auto w-full max-w-7xl">
