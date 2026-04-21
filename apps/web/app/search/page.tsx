@@ -13,6 +13,20 @@ import { useSearch } from "@/lib/hooks/useSearch";
 import { useMapStore } from "@/lib/store/mapStore";
 import type { VendorSummary, VendorType } from "@/types";
 
+type ChipFilter =
+  | { kind: "all" }
+  | { kind: "type"; value: VendorType }
+  | { kind: "region"; value: string };
+
+const FILTER_CHIPS: { label: string; filter: ChipFilter }[] = [
+  { label: "All", filter: { kind: "all" } },
+  { label: "Restaurants", filter: { kind: "type", value: "restaurant" } },
+  { label: "Grocery Stores", filter: { kind: "type", value: "grocery_store" } },
+  { label: "West African", filter: { kind: "region", value: "west-african" } },
+  { label: "Ethiopian", filter: { kind: "region", value: "ethiopian" } },
+  { label: "North African", filter: { kind: "region", value: "north-african" } }
+];
+
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -22,6 +36,7 @@ function SearchPageContent() {
 
   const typeParam = searchParams.get("type");
   const activeTypeFilter: VendorType | null = typeParam === "restaurant" || typeParam === "grocery_store" ? typeParam : null;
+  const activeRegionFilter = searchParams.get("region");
 
   const [prefilteredVendors, setPrefilteredVendors] = useState<VendorSummary[]>([]);
   const [isPrefilterLoading, setIsPrefilterLoading] = useState(false);
@@ -119,10 +134,55 @@ function SearchPageContent() {
     router.replace(`/search?${params.toString()}`);
   };
 
+  const isChipActive = (filter: ChipFilter) => {
+    if (filter.kind === "all") return !activeTypeFilter && !activeRegionFilter;
+    if (filter.kind === "type") return activeTypeFilter === filter.value;
+    return activeRegionFilter === filter.value;
+  };
+
+  const applyChip = (filter: ChipFilter) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (filter.kind === "all") {
+      params.delete("type");
+      params.delete("region");
+    } else if (filter.kind === "type") {
+      params.delete("region");
+      if (activeTypeFilter === filter.value) params.delete("type");
+      else params.set("type", filter.value);
+    } else {
+      params.delete("type");
+      if (activeRegionFilter === filter.value) params.delete("region");
+      else params.set("region", filter.value);
+    }
+    router.replace(`/search?${params.toString()}`);
+  };
+
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-6 pt-16 md:px-6">
       <div className="sticky top-16 z-40 mb-4 bg-[var(--color-bg)]/95 py-2 backdrop-blur">
         <SearchBar value={query} onChange={setQuery} isLoading={panelLoading} mode="compact" />
+        <div className="-mx-4 mt-3 overflow-x-auto px-4 md:-mx-6 md:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max gap-2">
+            {FILTER_CHIPS.map(({ label, filter }) => {
+              const active = isChipActive(filter);
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => applyChip(filter)}
+                  aria-pressed={active}
+                  className={`whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-medium transition ${
+                    active
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-text-inverse)]"
+                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[5fr_7fr]">
