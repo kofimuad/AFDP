@@ -3,9 +3,9 @@ import { usePathname } from "next/navigation";
 
 export function MainWithConditionalPadding({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  // Only add pt-16 if not on homepage top
-  const needsPadding = pathname !== "/";
+  // Only homepage gets no top-padding (full-bleed hero behind fixed NavBar)
+  const noPadding = pathname === "/";
   return (
-    <main className={`flex-1 flex flex-col${needsPadding ? " pt-16" : ""}`}>{children}</main>
+    <main className={`flex-1 flex flex-col${noPadding ? "" : " pt-16"}`}>{children}</main>
   );
 }
