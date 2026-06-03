@@ -4,70 +4,100 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── DESIGN TOKENS ──────────────────────────────────────── */
 :root {
-  /* Backgrounds */
-  --color-bg: #fafaf8;
-  --color-surface: #ffffff;
-  --color-surface-hover: #f5f2ee;
+  /* ── Backgrounds & Surfaces ── */
+  --color-bg:            #FAFAF8;
+  --color-surface:       #FFFFFF;
+  --color-surface-hover: #F5F2EE;
+  --color-surface-raised:#FFFFFF;
 
-  /* Dark contrast */
-  --color-dark: #0f0e0d;
-  --color-dark-secondary: #2a2622;
+  /* ── Dark contrast ── */
+  --color-dark:          #0F0E0D;
+  --color-dark-secondary:#2A2622;
 
-  /* Primary accent — deep terracotta */
-  --color-primary: #c8522a;
-  --color-primary-hover: #a8401e;
-  --color-primary-light: #f5e6df;
+  /* ── Primary — warm amber/orange ── */
+  --color-primary:       #E07020;
+  --color-primary-hover: #C05E18;
+  --color-primary-light: #FEF3E8;
 
-  /* Category colors */
-  --color-restaurant: #c8522a;
-  --color-grocery: #2a7a4b;
-  --color-grocery-light: #e0f0e8;
+  /* ── Category colors ── */
+  --color-restaurant:    #E07020;
+  --color-grocery:       #2A7A4B;
+  --color-grocery-light: #E0F0E8;
 
-  /* Text */
-  --color-text-primary: #0f0e0d;
-  --color-text-muted: #6b6560;
-  --color-text-inverse: #fafaf8;
+  /* ── Status colors ── */
+  --color-success:       #2A7A4B;
+  --color-success-light: #E0F0E8;
+  --color-warning:       #D97706;
+  --color-warning-light: #FEF3C7;
+  --color-error:         #DC2626;
+  --color-error-light:   #FEE2E2;
+  --color-info:          #2563EB;
+  --color-info-light:    #DBEAFE;
 
-  /* Borders */
-  --color-border: #e8e4df;
-  --color-border-strong: #d0cac3;
+  /* ── Text ── */
+  --color-text-primary:  #0F0E0D;
+  --color-text-secondary:#4A4540;
+  --color-text-muted:    #6B6560;
+  --color-text-inverse:  #FAFAF8;
 
-  /* Shadows */
+  /* ── Borders ── */
+  --color-border:        #E8E4DF;
+  --color-border-strong: #D0CAC3;
+
+  /* ── Elevation / Shadows ── */
   --shadow-sm: 0 1px 3px rgba(15, 14, 13, 0.08);
-  --shadow-md: 0 4px 16px rgba(15, 14, 13, 0.1);
+  --shadow-md: 0 4px 16px rgba(15, 14, 13, 0.10);
   --shadow-lg: 0 8px 32px rgba(15, 14, 13, 0.14);
+  --shadow-xl: 0 16px 48px rgba(15, 14, 13, 0.18);
 
-  /* Spacing scale */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
+  /* ── Spacing scale ── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-6:  24px;
+  --space-8:  32px;
   --space-12: 48px;
   --space-16: 64px;
 
-  /* Border radius */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  /* ── Border radius ── */
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   24px;
   --radius-full: 9999px;
 
+  /* ── Motion ── */
+  --duration-fast:  100ms;
+  --duration-base:  200ms;
+  --duration-slow:  350ms;
+  --ease-in-out:    cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out:       cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Typography ── */
+  --font-display: var(--font-sans), system-ui, sans-serif;
+  --font-body:    var(--font-sans), system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
 }
 
-.dark {
-  --color-bg: #0f0e0d;
-  --color-surface: #1a1917;
+/* ─── DARK THEME ─────────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-bg:            #0F0E0D;
+  --color-surface:       #1A1917;
   --color-surface-hover: #242220;
-  --color-dark: #fafaf8;
-  --color-text-primary: #f5f5f4;
-  --color-text-muted: #9ca3af;
-  --color-border: #2a2826;
-  --color-border-strong: #3a3835;
+  --color-surface-raised:#1F1E1C;
+  --color-dark:          #FAFAF8;
+  --color-text-primary:  #F5F5F4;
+  --color-text-secondary:#BDB8B2;
+  --color-text-muted:    #9CA3AF;
+  --color-border:        #2A2826;
+  --color-border-strong: #3A3835;
 }
 
+/* ─── BASE ───────────────────────────────────────────────── */
 * {
   box-sizing: border-box;
   border-color: var(--color-border);
@@ -85,6 +115,10 @@ body {
   font-family: var(--font-body);
   min-height: 100vh;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  transition:
+    background-color var(--duration-base) var(--ease-in-out),
+    color var(--duration-base) var(--ease-in-out);
 }
 
 a {
@@ -92,13 +126,49 @@ a {
   text-decoration: none;
 }
 
+/* ─── TYPOGRAPHY UTILITIES ───────────────────────────────── */
 .display-font {
   font-family: var(--font-display);
 }
 
+.mono-font {
+  font-family: var(--font-mono);
+}
+
+/* ─── PATTERN OVERLAY ────────────────────────────────────── */
 .pattern-overlay {
   background-image:
-    linear-gradient(to right, rgba(200, 82, 42, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(200, 82, 42, 0.06) 1px, transparent 1px);
+    linear-gradient(to right, rgba(224, 112, 32, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(224, 112, 32, 0.06) 1px, transparent 1px);
   background-size: 36px 36px;
+}
+
+/* ─── FOOD GRADIENTS ─────────────────────────────────────── */
+/* Warm amber-to-clay gradient for dish thumbnail placeholders */
+.food-gradient-dish {
+  background: linear-gradient(
+    135deg,
+    #E07020 0%,
+    #F59E0B 50%,
+    #C05E18 100%
+  );
+}
+
+/* Terracotta-to-dark gradient for vendor/restaurant header overlays */
+.food-gradient-vendor {
+  background: linear-gradient(
+    180deg,
+    rgba(224, 112, 32, 0.12) 0%,
+    rgba(192, 94, 24, 0.80) 100%
+  );
+}
+
+/* Dark scrim for text legibility on food images */
+.food-image-overlay {
+  background: linear-gradient(
+    to top,
+    rgba(15, 14, 13, 0.85) 0%,
+    rgba(15, 14, 13, 0.30) 50%,
+    transparent 100%
+  );
 }

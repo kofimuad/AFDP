@@ -176,9 +176,9 @@ export function CinematicHero() {
           }}
         >
           <div
-            className="mx-auto w-full max-w-[600px] overflow-hidden rounded-[var(--radius-xl)] border-l-4 border-l-[var(--color-primary)] transition-shadow focus-within:shadow-[0_0_0_2px_rgba(200,82,42,0.5),0_8px_32px_rgba(0,0,0,0.5)]"
+            className="mx-auto w-full max-w-[600px] overflow-hidden rounded-[var(--radius-xl)] border-l-4 border-l-[var(--color-primary)] transition-shadow focus-within:shadow-[0_0_0_2px_rgba(224,112,32,0.5),0_8px_32px_rgba(0,0,0,0.5)]"
             style={{
-              boxShadow: "0 0 0 1px rgba(200,82,42,0.3), 0 8px 32px rgba(0,0,0,0.4)"
+              boxShadow: "0 0 0 1px rgba(224,112,32,0.3), 0 8px 32px rgba(0,0,0,0.4)"
             }}
           >
             <SearchBar value={query} onChange={setQuery} mode="hero" />

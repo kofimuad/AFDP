@@ -115,7 +115,7 @@ export function MapView({ vendors, onVendorClick }: MapViewProps) {
                   type="button"
                   onClick={() => handleGetDirections(selectedVendor)}
                   disabled={loadingDirectionsVendorId === selectedVendor.id}
-                  className="mt-0 inline-flex cursor-pointer items-center gap-1 text-sm font-medium text-[#C8522A] underline-offset-2 hover:text-[#A8401E] hover:underline disabled:cursor-not-allowed disabled:opacity-70"
+                  className="mt-0 inline-flex cursor-pointer items-center gap-1 text-sm font-medium text-[var(--color-primary)] underline-offset-2 hover:text-[var(--color-primary-hover)] hover:underline disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {loadingDirectionsVendorId === selectedVendor.id ? <Loader2 size={14} className="animate-spin" /> : <Navigation2 size={14} />}
                   {loadingDirectionsVendorId === selectedVendor.id ? "Getting location..." : "Get Directions"}

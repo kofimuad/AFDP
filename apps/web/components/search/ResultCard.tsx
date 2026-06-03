@@ -78,7 +78,7 @@ export function ResultCard({ vendor, active = false, onClick }: ResultCardProps)
         type="button"
         onClick={handleGetDirections}
         disabled={isGettingLocation}
-        className="mt-2 flex cursor-pointer items-center gap-1 text-sm font-medium text-[#C8522A] underline-offset-2 hover:text-[#A8401E] hover:underline disabled:cursor-not-allowed disabled:opacity-70"
+        className="mt-2 flex cursor-pointer items-center gap-1 text-sm font-medium text-[var(--color-primary)] underline-offset-2 hover:text-[var(--color-primary-hover)] hover:underline disabled:cursor-not-allowed disabled:opacity-70"
       >
         {isGettingLocation ? <Loader2 size={14} className="animate-spin" /> : <Navigation2 size={14} />}
         {isGettingLocation ? "Getting location..." : "Get Directions"}

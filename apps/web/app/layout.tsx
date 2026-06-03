@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { AtSign, Globe, MessageCircle } from "lucide-react";
-import { Fraunces, Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import Link from "next/link";
 import { ThemeProvider } from "next-themes";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -13,16 +13,10 @@ import { ToastContainer } from "@/components/ui/Toast";
 import { Providers } from "./providers";
 import { MainWithConditionalPadding } from "./MainWithConditionalPadding";
 
-const fraunces = Fraunces({
+const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-display"
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-body"
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-sans"
 });
 
 export const metadata: Metadata = {
@@ -40,9 +34,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${inter.variable} min-h-full flex flex-col`} suppressHydrationWarning>
+    <html lang="en" className={`${plusJakartaSans.variable} min-h-full flex flex-col`} suppressHydrationWarning>
       <body className="min-h-screen flex flex-col">
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+        <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem={false}>
           <Providers>
             <NavBar />
             <MainWithConditionalPadding>{children}</MainWithConditionalPadding>
@@ -97,7 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <section>
                     <p className="mb-4 text-xs uppercase tracking-widest text-white/40">Connect</p>
                     <p className="mb-4 text-sm text-white/50">Built for the African diaspora community.</p>
-                    <a href="mailto:hello@afdp.io" className="text-[#C8522A] transition hover:text-[#A8401E]">
+                    <a href="mailto:hello@afdp.io" className="text-[var(--color-primary)] transition hover:text-[var(--color-primary-hover)]">
                       hello@afdp.io
                     </a>
                     <div className="mt-4 flex items-center gap-2">
