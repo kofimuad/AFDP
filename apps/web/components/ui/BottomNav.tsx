@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 export interface BottomNavItem {
-  href: string;
+  href: Route;
   label: string;
   icon: LucideIcon;
   /** Badge count displayed on the icon */
