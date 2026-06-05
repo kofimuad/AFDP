@@ -1,7 +1,6 @@
 "use client";
 
 import { Bookmark, BookmarkCheck } from "lucide-react";
-import { useEffect, useState } from "react";
 
 import { useToast } from "@/lib/store/toastStore";
 import { useSavedStore, type SavedVendor } from "@/lib/store/savedStore";
@@ -17,17 +16,12 @@ interface SaveVendorButtonProps {
 export function SaveVendorButton({ vendor, variant = "full", className }: SaveVendorButtonProps) {
   const { showToast } = useToast();
   const toggleVendor = useSavedStore((s) => s.toggleVendor);
-  const isVendorSaved = useSavedStore((s) => s.isVendorSaved);
-  const hasHydrated = useSavedStore((s) => s._hasHydrated);
-
-  const [saved, setSaved] = useState(false);
-  useEffect(() => {
-    if (hasHydrated) setSaved(isVendorSaved(vendor.slug));
-  }, [hasHydrated, isVendorSaved, vendor.slug]);
+  // Reactive: reflects store changes, including optimistic reverts and
+  // server hydration. Gated on hydration to avoid an SSR mismatch.
+  const saved = useSavedStore((s) => s._hasHydrated && s.vendors.some((v) => v.slug === vendor.slug));
 
   function handleClick() {
     const nowSaved = toggleVendor(vendor);
-    setSaved(nowSaved);
     showToast(
       nowSaved ? "Added to your saved places" : "Removed from saved places",
       nowSaved ? "success" : "info"

@@ -1,7 +1,6 @@
 "use client";
 
 import { Bookmark, BookmarkCheck } from "lucide-react";
-import { useEffect, useState } from "react";
 
 import { useToast } from "@/lib/store/toastStore";
 import { useSavedStore, type SavedFood } from "@/lib/store/savedStore";
@@ -17,25 +16,17 @@ interface SaveDishButtonProps {
 export function SaveDishButton({ food, variant = "full", className }: SaveDishButtonProps) {
   const { showToast } = useToast();
   const toggleFood = useSavedStore((s) => s.toggleFood);
-  const isFoodSaved = useSavedStore((s) => s.isFoodSaved);
-  const hasHydrated = useSavedStore((s) => s._hasHydrated);
-
-  // Avoid hydration mismatch — only reflect persisted state after rehydration
-  const [saved, setSaved] = useState(false);
-  useEffect(() => {
-    if (hasHydrated) setSaved(isFoodSaved(food.slug));
-  }, [hasHydrated, isFoodSaved, food.slug]);
+  // Reactive: reflects store changes, including optimistic reverts and
+  // server hydration. Gated on hydration to avoid an SSR mismatch.
+  const saved = useSavedStore((s) => s._hasHydrated && s.foods.some((f) => f.slug === food.slug));
 
   function handleClick() {
     const nowSaved = toggleFood(food);
-    setSaved(nowSaved);
     showToast(
       nowSaved ? "Added to your saved dishes" : "Removed from saved dishes",
       nowSaved ? "success" : "info"
     );
   }
-
-  const label = saved ? "Saved" : "Save Dish";
 
   if (variant === "icon") {
     return (
@@ -71,7 +62,7 @@ export function SaveDishButton({ food, variant = "full", className }: SaveDishBu
       )}
     >
       {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
-      {label}
+      {saved ? "Saved" : "Save Dish"}
     </button>
   );
 }

@@ -13,7 +13,8 @@ import type {
   SearchParams,
   SearchResponse,
   Vendor,
-  VendorsQueryParams
+  VendorsQueryParams,
+  VendorSummary
 } from "@/types";
 
 
@@ -292,6 +293,34 @@ export async function getFood(slug: string, lat?: number, lng?: number): Promise
 export async function getIngredient(slug: string, lat?: number, lng?: number): Promise<IngredientDetail> {
   const { data } = await api.get<IngredientDetail>(`/ingredients/${slug}`, { params: { lat, lng } });
   return data;
+}
+
+// --- SAVED COLLECTION (M6 SCRUM-37) ---
+
+export interface SavedCollection {
+  foods: FoodSummary[];
+  vendors: VendorSummary[];
+}
+
+export async function getSavedCollection(): Promise<SavedCollection> {
+  const { data } = await api.get<SavedCollection>("/saved");
+  return data;
+}
+
+export async function saveFoodApi(slug: string): Promise<void> {
+  await api.post(`/saved/foods/${slug}`);
+}
+
+export async function unsaveFoodApi(slug: string): Promise<void> {
+  await api.delete(`/saved/foods/${slug}`);
+}
+
+export async function saveVendorApi(slug: string): Promise<void> {
+  await api.post(`/saved/vendors/${slug}`);
+}
+
+export async function unsaveVendorApi(slug: string): Promise<void> {
+  await api.delete(`/saved/vendors/${slug}`);
 }
 
 // --- ADMIN ANALYTICS ---
