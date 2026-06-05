@@ -51,7 +51,7 @@ export function HomeHero() {
 
   return (
     <section
-      className="relative flex min-h-[100svh] items-center justify-center overflow-hidden px-6 py-24"
+      className="relative flex min-h-[calc(100svh-8rem)] items-center justify-center overflow-hidden px-6 py-20 md:min-h-[calc(100svh-4rem)]"
       aria-label="Hero"
     >
       {/* Background photo */}

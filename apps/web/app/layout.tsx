@@ -7,6 +7,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 import "./globals.css";
 
+import { AppBottomNav } from "@/components/ui/AppBottomNav";
 import { Logo } from "@/components/ui/Logo";
 import { NavBar } from "@/components/ui/NavBar";
 import { ToastContainer } from "@/components/ui/Toast";
@@ -41,8 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <NavBar />
             <MainWithConditionalPadding>{children}</MainWithConditionalPadding>
             <ToastContainer />
+            <AppBottomNav />
 
-            <footer className="border-t border-white/10 bg-[#0F0E0D] px-4 py-10 text-white mt-auto">
+            <footer className="mt-auto hidden border-t border-white/10 bg-[#0F0E0D] px-4 py-10 text-white md:block">
               <div className="mx-auto w-full max-w-7xl">
                 <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
                   <section>
