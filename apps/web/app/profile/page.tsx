@@ -13,6 +13,7 @@ import {
   Lock,
   LogOut,
   MapPin,
+  Monitor,
   Moon,
   Sun
 } from "lucide-react";
@@ -23,7 +24,15 @@ import { useTheme } from "next-themes";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { Input, FormField } from "@/components/ui/input";
-import { getAssetUrl, logoutUser, updateProfile, uploadProfilePhoto } from "@/lib/api";
+import {
+  changePassword,
+  clearMyLocation,
+  getAssetUrl,
+  logoutUser,
+  setMyLocation,
+  updateProfile,
+  uploadProfilePhoto
+} from "@/lib/api";
 import { useAuthStore } from "@/lib/store/authStore";
 import { usePreferencesStore } from "@/lib/store/preferencesStore";
 import { useSavedStore } from "@/lib/store/savedStore";
@@ -69,6 +78,7 @@ function ProfileContent() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const [signingOut, setSigningOut] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -175,8 +185,12 @@ function ProfileContent() {
     }
   };
 
-  const onSubmitPassword = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmitPassword = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!currentPassword) {
+      showToast("Enter your current password.", "error");
+      return;
+    }
     if (newPassword.length < 8) {
       showToast("New password must be at least 8 characters.", "error");
       return;
@@ -185,10 +199,24 @@ function ProfileContent() {
       showToast("Passwords do not match.", "error");
       return;
     }
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    showToast("Password change coming soon.", "info");
+    setChangingPassword(true);
+    try {
+      await changePassword({ current_password: currentPassword, new_password: newPassword });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordOpen(false);
+      showToast("Password updated successfully", "success");
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+      if (axiosErr.response?.status === 400) {
+        showToast(axiosErr.response.data?.detail ?? "Current password is incorrect.", "error");
+      } else {
+        showToast("Could not update password. Please try again.", "error");
+      }
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   const onDetectLocation = () => {
@@ -198,10 +226,19 @@ function ProfileContent() {
     }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setPreferredLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setLocating(false);
-        showToast("Default location saved", "success");
+      async (pos) => {
+        try {
+          const updated = await setMyLocation(pos.coords.latitude, pos.coords.longitude);
+          updateUser({ ...updated });
+          if (updated.pref_lat != null && updated.pref_lng != null) {
+            setPreferredLocation({ lat: updated.pref_lat, lng: updated.pref_lng });
+          }
+          showToast("Default location saved", "success");
+        } catch {
+          showToast("Couldn't save your location", "error");
+        } finally {
+          setLocating(false);
+        }
       },
       () => {
         setLocating(false);
@@ -209,6 +246,17 @@ function ProfileContent() {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
     );
+  };
+
+  const onClearLocation = async () => {
+    try {
+      const updated = await clearMyLocation();
+      updateUser({ ...updated });
+      clearPreferredLocation();
+      showToast("Default location cleared", "info");
+    } catch {
+      showToast("Couldn't clear location", "error");
+    }
   };
 
   const onSignOut = async () => {
@@ -219,6 +267,7 @@ function ProfileContent() {
       // best-effort
     }
     clearAuth();
+    clearPreferredLocation();
     router.push("/");
   };
 
@@ -379,7 +428,8 @@ function ProfileContent() {
               <div className="inline-flex rounded-full bg-[var(--color-surface-hover)] p-1" role="group" aria-label="Theme">
                 {[
                   { key: "light", label: "Light", Icon: Sun },
-                  { key: "dark", label: "Dark", Icon: Moon }
+                  { key: "dark", label: "Dark", Icon: Moon },
+                  { key: "system", label: "System", Icon: Monitor }
                 ].map(({ key, label, Icon }) => (
                   <button
                     key={key}
@@ -414,10 +464,7 @@ function ProfileContent() {
                 {preferredLocation && (
                   <button
                     type="button"
-                    onClick={() => {
-                      clearPreferredLocation();
-                      showToast("Default location cleared", "info");
-                    }}
+                    onClick={onClearLocation}
                     className="rounded-full px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] transition hover:text-[var(--color-text-primary)]"
                   >
                     Clear
@@ -471,7 +518,7 @@ function ProfileContent() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   autoComplete="new-password"
                 />
-                <Button type="submit" className="rounded-full">
+                <Button type="submit" loading={changingPassword} className="rounded-full">
                   Update Password
                 </Button>
               </form>

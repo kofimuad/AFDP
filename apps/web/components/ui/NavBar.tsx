@@ -8,6 +8,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { getAssetUrl, logoutUser } from "@/lib/api";
 import { useAuthStore } from "@/lib/store/authStore";
+import { usePreferencesStore } from "@/lib/store/preferencesStore";
 import { useHasHydrated } from "@/lib/store/useHasHydrated";
 
 import { Logo } from "./Logo";
@@ -47,6 +48,7 @@ export function NavBar() {
       // Best-effort; clear local state regardless.
     }
     clearAuth();
+    usePreferencesStore.getState().clearPreferredLocation();
     setDropdownOpen(false);
     router.push("/");
   };

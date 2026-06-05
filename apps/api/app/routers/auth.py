@@ -7,10 +7,12 @@ from uuid import UUID
 import asyncpg
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
-from app.core.database import fetchrow
+from app.core.database import execute, fetchrow
 from app.services.cloudinary_service import upload_image
 from app.schemas.auth import (
+    LocationUpdateRequest,
     LoginRequest,
+    PasswordChangeRequest,
     RefreshRequest,
     TokenResponse,
     UserRegisterRequest,
@@ -49,6 +51,8 @@ def _to_user_response(row: asyncpg.Record) -> UserResponse:
     keys = row.keys()
     created_at = row["created_at"] if "created_at" in keys else None
     profile_image_url = row["profile_image_url"] if "profile_image_url" in keys else None
+    pref_lat = row["pref_lat"] if "pref_lat" in keys else None
+    pref_lng = row["pref_lng"] if "pref_lng" in keys else None
     return UserResponse(
         id=str(row["id"]),
         email=row["email"],
@@ -57,6 +61,8 @@ def _to_user_response(row: asyncpg.Record) -> UserResponse:
         vendor_id=str(row["vendor_id"]) if row["vendor_id"] else None,
         created_at=created_at,
         profile_image_url=profile_image_url,
+        pref_lat=pref_lat,
+        pref_lng=pref_lng,
     )
 
 @router.post("/register", response_model=TokenResponse)
@@ -69,7 +75,7 @@ async def register_user(payload: UserRegisterRequest) -> TokenResponse:
         """
         INSERT INTO users (email, full_name, hashed_password, role, is_active)
         VALUES ($1, $2, $3, 'user', true)
-        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url;
+        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url, pref_lat, pref_lng;
         """,
         payload.email.lower(),
         payload.full_name.strip(),
@@ -104,7 +110,7 @@ async def register_vendor_user(payload: VendorRegisterRequest) -> TokenResponse:
         """
         INSERT INTO users (email, full_name, hashed_password, role, vendor_id, is_active)
         VALUES ($1, $2, $3, 'vendor', $4::uuid, true)
-        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url;
+        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url, pref_lat, pref_lng;
         """,
         payload.email.lower(),
         payload.full_name.strip(),
@@ -160,6 +166,8 @@ async def me(current_user: dict = Depends(get_current_user)) -> UserResponse:
         vendor_id=current_user["vendor_id"],
         created_at=current_user.get("created_at"),
         profile_image_url=current_user.get("profile_image_url"),
+        pref_lat=current_user.get("pref_lat"),
+        pref_lng=current_user.get("pref_lng"),
     )
 
 
@@ -177,7 +185,7 @@ async def update_me(
         UPDATE users
         SET full_name = $1
         WHERE id = $2
-        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url;
+        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url, pref_lat, pref_lng;
         """,
         payload.full_name.strip(),
         UUID(current_user["id"]),
@@ -220,9 +228,75 @@ async def upload_profile_photo(
         UPDATE users
         SET profile_image_url = $1
         WHERE id = $2
-        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url;
+        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url, pref_lat, pref_lng;
         """,
         url,
+        UUID(current_user["id"]),
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return _to_user_response(updated)
+
+
+@router.post("/me/password")
+async def change_password(
+    payload: PasswordChangeRequest,
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, str]:
+    """Change the authenticated user's password after verifying the current one."""
+    row = await fetchrow(
+        "SELECT hashed_password FROM users WHERE id = $1;",
+        UUID(current_user["id"]),
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_password(payload.current_password, row["hashed_password"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    if payload.new_password == payload.current_password:
+        raise HTTPException(status_code=400, detail="New password must be different")
+
+    await execute(
+        "UPDATE users SET hashed_password = $1 WHERE id = $2;",
+        hash_password(payload.new_password),
+        UUID(current_user["id"]),
+    )
+    return {"message": "Password updated"}
+
+
+@router.put("/me/location", response_model=UserResponse)
+async def set_location(
+    payload: LocationUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+) -> UserResponse:
+    """Save the authenticated user's default location for proximity searches."""
+    updated = await fetchrow(
+        """
+        UPDATE users
+        SET pref_lat = $1, pref_lng = $2
+        WHERE id = $3
+        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url, pref_lat, pref_lng;
+        """,
+        payload.lat,
+        payload.lng,
+        UUID(current_user["id"]),
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return _to_user_response(updated)
+
+
+@router.delete("/me/location", response_model=UserResponse)
+async def clear_location(
+    current_user: dict = Depends(get_current_user),
+) -> UserResponse:
+    """Clear the authenticated user's saved default location."""
+    updated = await fetchrow(
+        """
+        UPDATE users
+        SET pref_lat = NULL, pref_lng = NULL
+        WHERE id = $1
+        RETURNING id, email, full_name, role, vendor_id, created_at, profile_image_url, pref_lat, pref_lng;
+        """,
         UUID(current_user["id"]),
     )
     if updated is None:

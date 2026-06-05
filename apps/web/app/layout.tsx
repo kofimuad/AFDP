@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${plusJakartaSans.variable} min-h-full flex flex-col`} suppressHydrationWarning>
       <body className="min-h-screen flex flex-col">
-        <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem={false}>
+        <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>
           <Providers>
             <NavBar />
             <MainWithConditionalPadding>{children}</MainWithConditionalPadding>

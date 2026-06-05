@@ -148,6 +148,8 @@ export interface MeResponse {
   vendor_id: string | null
   created_at: string | null
   profile_image_url: string | null
+  pref_lat: number | null
+  pref_lng: number | null
 }
 
 export const getMe = async (): Promise<MeResponse> => {
@@ -157,6 +159,23 @@ export const getMe = async (): Promise<MeResponse> => {
 
 export const updateProfile = async (data: { full_name: string }): Promise<MeResponse> => {
   const res = await api.patch<MeResponse>('/auth/me', data)
+  return res.data
+}
+
+export const changePassword = async (data: {
+  current_password: string
+  new_password: string
+}): Promise<void> => {
+  await api.post('/auth/me/password', data)
+}
+
+export const setMyLocation = async (lat: number, lng: number): Promise<MeResponse> => {
+  const res = await api.put<MeResponse>('/auth/me/location', { lat, lng })
+  return res.data
+}
+
+export const clearMyLocation = async (): Promise<MeResponse> => {
+  const res = await api.delete<MeResponse>('/auth/me/location')
   return res.data
 }
 

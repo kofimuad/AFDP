@@ -6,6 +6,7 @@ import { PropsWithChildren, useEffect, useRef, useState } from "react";
 import { getMe } from "@/lib/api";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useHasHydrated } from "@/lib/store/useHasHydrated";
+import { usePreferencesStore } from "@/lib/store/preferencesStore";
 import {
   clearSaved,
   hydrateSavedFromServer,
@@ -34,7 +35,16 @@ function AuthRefresher() {
           vendor_id: me.vendor_id,
           created_at: me.created_at,
           profile_image_url: me.profile_image_url,
+          pref_lat: me.pref_lat,
+          pref_lng: me.pref_lng,
         });
+        // Seed the per-user default location so useGeolocation honors it.
+        const prefs = usePreferencesStore.getState();
+        if (me.pref_lat != null && me.pref_lng != null) {
+          prefs.setPreferredLocation({ lat: me.pref_lat, lng: me.pref_lng });
+        } else {
+          prefs.clearPreferredLocation();
+        }
       } catch {
         if (!cancelled) clearAuth();
       }
