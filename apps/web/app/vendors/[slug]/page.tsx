@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { MapView } from "@/components/map/MapView";
 import { GetDirectionsButton } from "@/components/vendor/GetDirectionsButton";
+import { SaveVendorButton } from "@/components/vendor/SaveVendorButton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/button";
 import { getVendor } from "@/lib/api";
@@ -43,11 +44,20 @@ export default async function VendorDetailPage({ params }: VendorDetailProps) {
           </div>
         </div>
 
-        {vendor.lat != null && vendor.lng != null ? (
-          <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {vendor.lat != null && vendor.lng != null ? (
             <GetDirectionsButton vendorLat={vendor.lat} vendorLng={vendor.lng} vendorName={vendor.name} />
-          </div>
-        ) : null}
+          ) : null}
+          <SaveVendorButton
+            vendor={{
+              slug: vendor.slug,
+              name: vendor.name,
+              address: vendor.address,
+              type: vendor.type,
+              image_url: vendor.image_url
+            }}
+          />
+        </div>
       </section>
 
       <section className="space-y-3">
