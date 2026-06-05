@@ -1,146 +1,161 @@
 "use client";
 
-import { useMemo } from "react";
+import { ChefHat, MapPin, SearchX } from "lucide-react";
+import Link from "next/link";
 
 import { ResultCard } from "@/components/search/ResultCard";
-import type { SearchIngredientBundle, SearchResponse, VendorSummary } from "@/types";
+import type { FoodSummary, VendorSummary } from "@/types";
 
 interface SearchPanelProps {
-  data?: SearchResponse;
+  query: string;
   isLoading: boolean;
+  /** Display list — already filtered + sorted by the page */
+  vendors: VendorSummary[];
+  foodMatch?: FoodSummary | null;
+  /** True once the user has entered a query */
+  hasSearched: boolean;
   activeVendorId?: string | null;
   onVendorSelect?: (vendor: VendorSummary) => void;
-  prefetchedVendors?: VendorSummary[];
 }
+
+const SUGGESTIONS = ["Jollof Rice", "Egusi Soup", "Suya", "Fufu", "Pepper Soup"];
 
 function LoadingSkeleton() {
   return (
     <div className="space-y-3">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div key={index} className="h-24 animate-pulse rounded-[var(--radius-lg)] bg-[var(--color-surface-hover)]" />
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div
+          key={i}
+          className="h-[88px] animate-pulse rounded-[var(--radius-md)] bg-[var(--color-surface-hover)]"
+        />
       ))}
     </div>
   );
 }
 
-function IngredientAccordion({
-  bundle,
+export function SearchPanel({
+  query,
+  isLoading,
+  vendors,
+  foodMatch,
+  hasSearched,
   activeVendorId,
   onVendorSelect
-}: {
-  bundle: SearchIngredientBundle;
-  activeVendorId?: string | null;
-  onVendorSelect?: (vendor: VendorSummary) => void;
-}) {
-  return (
-    <details className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-      <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[var(--color-text-primary)]">{bundle.ingredient.name}</summary>
-      <div className="grid gap-3 border-t border-[var(--color-border)] p-3">
-        {bundle.stores.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)]">No nearby stores found for this ingredient.</p>
-        ) : (
-          bundle.stores.map((store) => (
-            <ResultCard
-              key={`${bundle.ingredient.id}-${store.id}`}
-              vendor={store}
-              active={activeVendorId === store.id}
-              onClick={() => onVendorSelect?.(store)}
-            />
-          ))
-        )}
-      </div>
-    </details>
-  );
-}
-
-export function SearchPanel({ data, isLoading, activeVendorId, onVendorSelect, prefetchedVendors = [] }: SearchPanelProps) {
-  const restaurants = useMemo(() => (data?.restaurants?.length ? data.restaurants : prefetchedVendors), [data, prefetchedVendors]);
-
-  const resultCount = useMemo(() => {
-    if (!data) return 0;
-    const ids = new Set<string>();
-    for (const r of data.restaurants) ids.add(r.id);
-    for (const bundle of data.ingredients) {
-      for (const s of bundle.stores) ids.add(s.id);
-    }
-    return ids.size;
-  }, [data]);
-
-  const hasData = Boolean(
-    (data && (data.restaurants.length > 0 || data.ingredients.length > 0 || data.food_match)) || prefetchedVendors.length > 0
-  );
-
+}: SearchPanelProps) {
   if (isLoading) {
     return <LoadingSkeleton />;
   }
 
-  if (!hasData) {
+  // ── Initial state: nothing searched yet ──
+  if (!hasSearched && vendors.length === 0) {
     return (
-      <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] p-8 text-center">
-        <p className="display-font text-2xl text-[var(--color-text-primary)]">Search for a dish above</p>
-        <p className="mt-2 text-sm text-[var(--color-text-muted)]">Results for restaurants and ingredient stores will appear here.</p>
+      <div className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] p-8 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)]">
+          <MapPin size={22} />
+        </span>
+        <p className="display-font text-xl font-bold text-[var(--color-text-primary)]">
+          Search for a dish or place
+        </p>
+        <p className="max-w-xs text-sm text-[var(--color-text-muted)]">
+          Find restaurants serving the dish you crave and stores stocking the ingredients to cook it yourself.
+        </p>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {data ? (
-        <p className="text-sm font-medium text-[var(--color-text-muted)]">
-          {resultCount} {resultCount === 1 ? "result" : "results"} found near you
+  // ── Zero-result state (logged server-side as result_count: 0) ──
+  if (hasSearched && vendors.length === 0 && !foodMatch) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] p-8 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]">
+          <SearchX size={22} />
+        </span>
+        <p className="display-font text-xl font-bold text-[var(--color-text-primary)]">
+          No results for &ldquo;{query}&rdquo;
         </p>
-      ) : null}
-
-      {data?.food_match ? (
-        <section className="rounded-[var(--radius-lg)] bg-[var(--color-primary)] p-5 text-[var(--color-text-inverse)]">
-          <p className="display-font text-2xl">{data.food_match.name}</p>
-          <p className="mt-2 text-sm text-[var(--color-text-inverse)]/90">{data.food_match.description ?? "Discover nearby options for this dish."}</p>
-        </section>
-      ) : null}
-
-      <section className="space-y-3">
-        <h3 className="display-font text-xl text-[var(--color-text-primary)]">Restaurants serving this</h3>
-        <div className="grid gap-3">
-          {restaurants.length > 0 ? (
-            restaurants.map((vendor) => (
-              <ResultCard key={vendor.id} vendor={vendor} active={activeVendorId === vendor.id} onClick={() => onVendorSelect?.(vendor)} />
-            ))
-          ) : (
-            <p className="text-sm text-[var(--color-text-muted)]">No nearby restaurants currently match this food.</p>
-          )}
+        <p className="max-w-xs text-sm text-[var(--color-text-muted)]">
+          We couldn&rsquo;t find anything nearby matching your search. Try another dish or widen your area.
+        </p>
+        <div className="mt-1 flex flex-wrap justify-center gap-2">
+          {SUGGESTIONS.map((s) => (
+            <Link
+              key={s}
+              href={`/search?q=${encodeURIComponent(s)}`}
+              className="rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            >
+              {s}
+            </Link>
+          ))}
         </div>
-      </section>
+      </div>
+    );
+  }
 
-      {data?.ingredients?.length ? (
-        <section className="space-y-3">
-          <h3 className="display-font text-xl text-[var(--color-text-primary)]">Where to find ingredients</h3>
-          <div className="space-y-3">
-            {data.ingredients.map((bundle) => (
-              <IngredientAccordion key={bundle.ingredient.id} bundle={bundle} activeVendorId={activeVendorId} onVendorSelect={onVendorSelect} />
-            ))}
-          </div>
-        </section>
+  // ── Results ──
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-[var(--color-text-muted)]">
+        <strong className="text-[var(--color-text-primary)]">
+          {vendors.length} {vendors.length === 1 ? "result" : "results"}
+        </strong>
+        {query.trim() ? ` for “${query.trim()}”` : ""} near you
+      </p>
+
+      {/* Food match highlight */}
+      {foodMatch ? (
+        <Link
+          href={`/foods/${foodMatch.slug}`}
+          className="block overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-primary)] p-5 text-[var(--color-text-inverse)] transition hover:brightness-105"
+        >
+          <p className="text-xs font-bold uppercase tracking-wider text-white/70">Dish match</p>
+          <p className="display-font mt-1 text-2xl font-extrabold">{foodMatch.name}</p>
+          <p className="mt-1 text-sm text-white/90">
+            {foodMatch.description ?? "View the recipe, ingredients and nearby options."}
+          </p>
+          <span className="mt-3 inline-block text-sm font-semibold underline underline-offset-2">
+            View dish details →
+          </span>
+        </Link>
       ) : null}
 
-      {/* Preparation guide placeholder */}
-      {data?.food_match && (
-        <section className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-lg">👨‍🍳</span>
-            <h3 className="display-font text-xl text-[var(--color-text-primary)]">How to prepare it</h3>
-            <span className="rounded-full bg-[var(--color-primary-light)] px-2 py-0.5 text-xs font-medium text-[var(--color-primary)]">Coming soon</span>
+      {/* Vendor results */}
+      {vendors.length > 0 ? (
+        <div className="space-y-3">
+          {vendors.map((vendor) => (
+            <ResultCard
+              key={vendor.id}
+              vendor={vendor}
+              active={activeVendorId === vendor.id}
+              onClick={() => onVendorSelect?.(vendor)}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border-strong)] px-4 py-6 text-center text-sm text-[var(--color-text-muted)]">
+          No nearby places match this filter.
+        </p>
+      )}
+
+      {/* How to prepare (M6 hook) */}
+      {foodMatch ? (
+        <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] p-5">
+          <div className="mb-2 flex items-center gap-2">
+            <ChefHat size={18} className="text-[var(--color-primary)]" />
+            <h3 className="display-font text-base font-bold text-[var(--color-text-primary)]">
+              How to prepare it
+            </h3>
+            <span className="rounded-full bg-[var(--color-primary-light)] px-2 py-0.5 text-xs font-medium text-[var(--color-primary)]">
+              Coming soon
+            </span>
           </div>
           <p className="text-sm text-[var(--color-text-muted)]">
-            Step-by-step preparation guides and video recipes for {data.food_match.name} will appear here.
+            Step-by-step guides for {foodMatch.name} will appear here.{" "}
+            <Link href={`/foods/${foodMatch.slug}`} className="font-semibold text-[var(--color-primary)] hover:underline">
+              See ingredients →
+            </Link>
           </p>
-        </section>
-      )}
+        </div>
+      ) : null}
     </div>
   );
 }
-
-// FLUTTER NOTE:
-// This component maps to: SliverList/Column with ExpansionTile sections
-// Design tokens used: --radius-lg, --color-surface-hover, --color-border, --color-text-primary, --color-text-muted, --color-border-strong, --color-surface, --color-primary, --color-text-inverse
-// State management equivalent: BLoC search-result state + selected-vendor state
-// API call: searchFood / getVendors
