@@ -2,37 +2,59 @@
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import { ChevronDown, ChevronUp, Lock, Store } from "lucide-react";
+import {
+  Bookmark,
+  Camera,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  LayoutDashboard,
+  Loader2,
+  Lock,
+  LogOut,
+  MapPin,
+  Moon,
+  Sun
+} from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import { getAssetUrl, updateProfile, uploadProfilePhoto } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Input, FormField } from "@/components/ui/input";
+import { getAssetUrl, logoutUser, updateProfile, uploadProfilePhoto } from "@/lib/api";
 import { useAuthStore } from "@/lib/store/authStore";
+import { usePreferencesStore } from "@/lib/store/preferencesStore";
+import { useSavedStore } from "@/lib/store/savedStore";
 import { useToast } from "@/lib/store/toastStore";
+import { cn } from "@/lib/utils";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-type RoleBadge = { label: string; className: string };
-
-const roleBadges: Record<string, RoleBadge> = {
-  user: {
-    label: "Member",
-    className: "bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]",
-  },
-  vendor: {
-    label: "Vendor",
-    className: "bg-[var(--color-primary-light)] text-[var(--color-primary)]",
-  },
-  admin: {
-    label: "Admin",
-    className: "bg-[var(--color-dark)] text-[var(--color-text-inverse)]",
-  },
+const roleBadges: Record<string, { label: string; className: string }> = {
+  user: { label: "Member", className: "bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]" },
+  vendor: { label: "Vendor", className: "bg-[var(--color-primary-light)] text-[var(--color-primary)]" },
+  admin: { label: "Admin", className: "bg-[var(--color-dark)] text-[var(--color-text-inverse)]" }
 };
+
+// ── Section card wrapper ─────────────────────────────────────
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+      <h2 className="display-font mb-5 text-lg font-bold text-[var(--color-text-primary)]">{title}</h2>
+      {children}
+    </section>
+  );
+}
 
 function ProfileContent() {
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
   const { showToast } = useToast();
+  const router = useRouter();
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -47,6 +69,20 @@ function ProfileContent() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [signingOut, setSigningOut] = useState(false);
+  const [locating, setLocating] = useState(false);
+
+  // ── Preferences ──
+  const { theme, setTheme } = useTheme();
+  const preferredLocation = usePreferencesStore((s) => s.preferredLocation);
+  const setPreferredLocation = usePreferencesStore((s) => s.setPreferredLocation);
+  const clearPreferredLocation = usePreferencesStore((s) => s.clearPreferredLocation);
+
+  // ── Saved counts ──
+  const savedHydrated = useSavedStore((s) => s._hasHydrated);
+  const savedFoods = useSavedStore((s) => s.foods.length);
+  const savedPlaces = useSavedStore((s) => s.vendors.length);
 
   useEffect(() => {
     if (user?.full_name) setFullName(user.full_name);
@@ -72,8 +108,7 @@ function ProfileContent() {
     try {
       return new Date(user.created_at).toLocaleDateString(undefined, {
         year: "numeric",
-        month: "long",
-        day: "numeric",
+        month: "long"
       });
     } catch {
       return null;
@@ -82,6 +117,9 @@ function ProfileContent() {
 
   const role = user?.role ?? "user";
   const badge = roleBadges[role] ?? roleBadges.user;
+  const isVendorish = role === "vendor" || role === "admin";
+
+  // ── Handlers ──
 
   const onPhotoPick = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -106,15 +144,7 @@ function ProfileContent() {
     setUploadingPhoto(true);
     try {
       const updated = await uploadProfilePhoto(selectedFile);
-      updateUser({
-        id: updated.id,
-        email: updated.email,
-        full_name: updated.full_name,
-        role: updated.role,
-        vendor_id: updated.vendor_id,
-        created_at: updated.created_at,
-        profile_image_url: updated.profile_image_url,
-      });
+      updateUser({ ...updated });
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
       setSelectedFile(null);
@@ -136,15 +166,7 @@ function ProfileContent() {
     setSavingProfile(true);
     try {
       const updated = await updateProfile({ full_name: fullName.trim() });
-      updateUser({
-        id: updated.id,
-        email: updated.email,
-        full_name: updated.full_name,
-        role: updated.role,
-        vendor_id: updated.vendor_id,
-        created_at: updated.created_at,
-        profile_image_url: updated.profile_image_url,
-      });
+      updateUser({ ...updated });
       showToast("Profile updated successfully", "success");
     } catch {
       showToast("Could not update profile. Please try again.", "error");
@@ -169,32 +191,70 @@ function ProfileContent() {
     showToast("Password change coming soon.", "info");
   };
 
+  const onDetectLocation = () => {
+    if (!navigator.geolocation) {
+      showToast("Location is not supported on this device", "error");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPreferredLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocating(false);
+        showToast("Default location saved", "success");
+      },
+      () => {
+        setLocating(false);
+        showToast("Couldn't get your location", "error");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+    );
+  };
+
+  const onSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await logoutUser();
+    } catch {
+      // best-effort
+    }
+    clearAuth();
+    router.push("/");
+  };
+
   if (!user) return null;
 
-  return (
-    <main className="min-h-screen bg-[var(--color-bg)] pb-16 pt-20">
-      <div className="mx-auto w-full max-w-[800px] px-4 md:px-6">
-        <h1 className="display-font mb-6 text-3xl font-bold text-[var(--color-text-primary)]">
-          Your Profile
-        </h1>
+  const avatarSrc = previewUrl ?? (user.profile_image_url ? getAssetUrl(user.profile_image_url) : null);
 
-        <div className="grid gap-8 md:grid-cols-[180px_1fr]">
-          <section className="flex flex-col items-center md:items-start">
-            <div className="relative flex h-[120px] w-[120px] items-center justify-center overflow-hidden rounded-full bg-[var(--color-primary)] text-3xl font-bold text-white">
-              {previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={previewUrl} alt="Avatar preview" className="h-full w-full object-cover" />
-              ) : user.profile_image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={getAssetUrl(user.profile_image_url) ?? ""}
-                  alt="Profile avatar"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span>{initials}</span>
-              )}
+  return (
+    <main className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6">
+      <h1 className="display-font mb-6 text-3xl font-extrabold tracking-tight text-[var(--color-text-primary)]">
+        My Profile
+      </h1>
+
+      <div className="grid gap-6 md:grid-cols-[260px_1fr]">
+        {/* ── Avatar sidebar ── */}
+        <aside className="md:sticky md:top-24 md:self-start">
+          <div className="flex flex-col items-center rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center">
+            <div className="relative">
+              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[var(--color-primary-light)] text-3xl font-bold text-[var(--color-primary)]">
+                {avatarSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarSrc} alt="Profile avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <span>{initials}</span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                aria-label="Change profile photo"
+                className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-primary)] text-white transition hover:bg-[var(--color-primary-hover)]"
+              >
+                <Camera size={14} />
+              </button>
             </div>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -202,147 +262,220 @@ function ProfileContent() {
               onChange={onPhotoPick}
               className="hidden"
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="mt-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
-            >
-              Change Photo
-            </button>
+
+            <p className="display-font mt-4 text-xl font-bold text-[var(--color-text-primary)]">{user.full_name}</p>
+            <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">{user.email}</p>
+            <span className={cn("mt-3 inline-block rounded-full px-3 py-1 text-xs font-bold", badge.className)}>
+              {badge.label}
+            </span>
+            {memberSince && (
+              <p className="mt-3 text-xs text-[var(--color-text-muted)]">Member since {memberSince}</p>
+            )}
+
             {previewUrl && (
+              <Button
+                type="button"
+                size="sm"
+                loading={uploadingPhoto}
+                onClick={onSavePhoto}
+                className="mt-4 w-full rounded-full"
+              >
+                Save Photo
+              </Button>
+            )}
+
+            <div className="mt-5 w-full space-y-2">
+              {isVendorish && user.vendor_id && (
+                <Link
+                  href="/dashboard"
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)]"
+                >
+                  <LayoutDashboard size={16} />
+                  Vendor Dashboard
+                </Link>
+              )}
               <button
                 type="button"
-                onClick={onSavePhoto}
-                disabled={uploadingPhoto}
-                className="mt-2 rounded-[var(--radius-md)] bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
+                onClick={onSignOut}
+                disabled={signingOut}
+                className="flex w-full items-center justify-center gap-2 rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] disabled:opacity-60"
               >
-                {uploadingPhoto ? "Saving..." : "Save Photo"}
+                {signingOut ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
+                Sign Out
               </button>
-            )}
-            <p className="mt-2 text-center text-xs text-[var(--color-text-muted)] md:text-left">
-              JPG, PNG or WebP. Max 5MB.
-            </p>
-          </section>
+            </div>
+          </div>
+        </aside>
 
-          <section>
+        {/* ── Main column ── */}
+        <div className="space-y-6">
+          {/* Personal information */}
+          <Section title="Personal Information">
             <form onSubmit={onSaveProfile} className="space-y-4">
-              <label className="block space-y-1">
-                <span className="text-sm font-medium text-[var(--color-text-primary)]">Full name</span>
-                <input
+              <FormField label="Full name" htmlFor="profile-name" required>
+                <Input
+                  id="profile-name"
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  required
                   minLength={2}
                   maxLength={100}
-                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none"
+                  required
                 />
-              </label>
+              </FormField>
 
-              <label className="block space-y-1">
-                <span className="text-sm font-medium text-[var(--color-text-primary)]">Email</span>
-                <div className="relative">
-                  <input
-                    type="email"
-                    value={user.email}
-                    readOnly
-                    className="w-full cursor-not-allowed rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-hover)] px-3 py-2 pr-9 text-sm text-[var(--color-text-muted)]"
-                  />
-                  <Lock
-                    size={16}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-                  />
-                </div>
-                <span className="text-xs text-[var(--color-text-muted)]">
-                  Email cannot be changed for security.
-                </span>
-              </label>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="space-y-1">
-                  <span className="block text-sm font-medium text-[var(--color-text-primary)]">Role</span>
-                  <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${badge.className}`}>
-                    {badge.label}
-                  </span>
-                </div>
-                {memberSince && (
-                  <div className="space-y-1">
-                    <span className="block text-sm font-medium text-[var(--color-text-primary)]">Member since</span>
-                    <span className="text-sm text-[var(--color-text-muted)]">{memberSince}</span>
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={savingProfile}
-                className="w-full rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-60 sm:w-auto"
+              <FormField
+                label="Email address"
+                htmlFor="profile-email"
+                hint="Email cannot be changed. Contact support to update it."
               >
-                {savingProfile ? "Saving..." : "Save Changes"}
-              </button>
+                <Input
+                  id="profile-email"
+                  type="email"
+                  value={user.email}
+                  readOnly
+                  iconRight={<Lock size={16} />}
+                  className="cursor-not-allowed bg-[var(--color-surface-hover)] text-[var(--color-text-muted)]"
+                />
+              </FormField>
+
+              <Button type="submit" loading={savingProfile} className="rounded-full">
+                Save Changes
+              </Button>
             </form>
+          </Section>
 
-            {(user.role === "vendor" || user.role === "admin") && user.vendor_id && (
-              <div className="mt-8 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <Store size={18} className="text-[var(--color-primary)]" />
-                  <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Your Business</h2>
-                </div>
-                <p className="mb-3 text-sm text-[var(--color-text-muted)]">
-                  Manage your listing, verification, and menu from the vendor dashboard.
-                </p>
-                <Link
-                  href="/dashboard"
-                  className="inline-block rounded-[var(--radius-md)] border border-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-light)]"
-                >
-                  Manage Listing
-                </Link>
+          {/* Saved entry */}
+          <Section title="Saved">
+            <Link
+              href="/saved"
+              className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] px-4 py-3 transition hover:bg-[var(--color-surface-hover)]"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary-light)] text-[var(--color-primary)]">
+                <Bookmark size={18} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-[var(--color-text-primary)]">
+                  Saved dishes &amp; places
+                </span>
+                <span className="block text-xs text-[var(--color-text-muted)]">
+                  {savedHydrated
+                    ? `${savedFoods} ${savedFoods === 1 ? "dish" : "dishes"} · ${savedPlaces} ${savedPlaces === 1 ? "place" : "places"}`
+                    : "View your collection"}
+                </span>
+              </span>
+              <ChevronRight size={18} className="shrink-0 text-[var(--color-text-muted)]" />
+            </Link>
+          </Section>
+
+          {/* Preferences */}
+          <Section title="Preferences">
+            {/* Theme */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] pb-4">
+              <div>
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">Theme</p>
+                <p className="text-xs text-[var(--color-text-muted)]">Choose how AFDP looks to you.</p>
               </div>
-            )}
-
-            <div className="mt-8 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-              <button
-                type="button"
-                onClick={() => setPasswordOpen((prev) => !prev)}
-                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-[var(--color-text-primary)]"
-                aria-expanded={passwordOpen}
-              >
-                <span>Change Password</span>
-                {passwordOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
-              {passwordOpen && (
-                <form onSubmit={onSubmitPassword} className="space-y-3 border-t border-[var(--color-border)] p-4">
-                  <input
-                    type="password"
-                    placeholder="Current password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
-                  />
-                  <input
-                    type="password"
-                    placeholder="New password (min 8)"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    minLength={8}
-                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
-                  />
-                  <input
-                    type="password"
-                    placeholder="Confirm new password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
-                  />
+              <div className="inline-flex rounded-full bg-[var(--color-surface-hover)] p-1" role="group" aria-label="Theme">
+                {[
+                  { key: "light", label: "Light", Icon: Sun },
+                  { key: "dark", label: "Dark", Icon: Moon }
+                ].map(({ key, label, Icon }) => (
                   <button
-                    type="submit"
-                    className="w-full rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)] sm:w-auto"
+                    key={key}
+                    type="button"
+                    onClick={() => setTheme(key)}
+                    aria-pressed={theme === key}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                      theme === key
+                        ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[var(--shadow-sm)]"
+                        : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                    )}
                   >
-                    Update Password
+                    <Icon size={13} />
+                    {label}
                   </button>
-                </form>
-              )}
+                ))}
+              </div>
             </div>
+
+            {/* Location */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">Default location</p>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  {preferredLocation
+                    ? `Pinned to ${preferredLocation.lat.toFixed(3)}, ${preferredLocation.lng.toFixed(3)} — used for nearby results.`
+                    : "Set a default so searches show nearby places without asking each time."}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {preferredLocation && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearPreferredLocation();
+                      showToast("Default location cleared", "info");
+                    }}
+                    className="rounded-full px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] transition hover:text-[var(--color-text-primary)]"
+                  >
+                    Clear
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onDetectLocation}
+                  disabled={locating}
+                  className="inline-flex items-center gap-2 rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] disabled:opacity-60"
+                >
+                  {locating ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
+                  {preferredLocation ? "Update" : "Use my location"}
+                </button>
+              </div>
+            </div>
+          </Section>
+
+          {/* Change password (collapsible) */}
+          <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]">
+            <button
+              type="button"
+              onClick={() => setPasswordOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between px-6 py-4 text-left"
+              aria-expanded={passwordOpen}
+            >
+              <span className="display-font text-lg font-bold text-[var(--color-text-primary)]">Change Password</span>
+              {passwordOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+            {passwordOpen && (
+              <form onSubmit={onSubmitPassword} className="space-y-3 border-t border-[var(--color-border)] p-6">
+                <Input
+                  type="password"
+                  placeholder="Current password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+                <Input
+                  type="password"
+                  placeholder="New password (min 8 characters)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+                <Input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <Button type="submit" className="rounded-full">
+                  Update Password
+                </Button>
+              </form>
+            )}
           </section>
         </div>
       </div>
