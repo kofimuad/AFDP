@@ -5,8 +5,16 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
 
 from app.schemas.error import ErrorResponse
-from app.schemas.vendor import VendorItemCreate, VendorItemOut, VendorItemUpdate, VendorOut, VendorRegisterIn, VendorSelfUpdate
-from app.services.analytics_service import log_view_event
+from app.schemas.vendor import (
+    VendorAnalyticsOut,
+    VendorItemCreate,
+    VendorItemOut,
+    VendorItemUpdate,
+    VendorOut,
+    VendorRegisterIn,
+    VendorSelfUpdate,
+)
+from app.services.analytics_service import log_view_event, vendor_analytics
 from app.services.auth_service import get_optional_user, require_vendor
 from app.services.cloudinary_service import upload_image
 from app.services.vendor_service import (
@@ -51,6 +59,22 @@ async def get_my_vendor_route(
     payload = await get_vendor_by_id(UUID(vendor_id))
     full = await get_vendor_detail(slug=payload["slug"])
     return VendorOut.model_validate(full)
+
+
+@router.get(
+    "/me/analytics",
+    response_model=VendorAnalyticsOut,
+    responses={200: {"description": "Analytics for the authenticated vendor"}, 404: {"model": ErrorResponse}},
+)
+async def get_my_vendor_analytics_route(
+    current_user: dict = Depends(require_vendor),
+) -> VendorAnalyticsOut:
+    """Return view/search/save analytics scoped to the authenticated vendor."""
+    vendor_id = current_user.get("vendor_id")
+    if not vendor_id:
+        raise HTTPException(status_code=404, detail="No vendor listing found for this account")
+    data = await vendor_analytics(UUID(vendor_id))
+    return VendorAnalyticsOut.model_validate(data)
 
 VENDOR_EXAMPLE = {
     "id": "11111111-1111-1111-1111-111111111111",

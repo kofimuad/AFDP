@@ -3,6 +3,12 @@ export const getMyVendor = async (): Promise<Vendor> => {
   const { data } = await api.get<Vendor>("/vendors/me");
   return data;
 };
+
+// --- VENDOR: Analytics scoped to the authenticated vendor ---
+export const getMyVendorAnalytics = async (): Promise<import("@/types").VendorAnalytics> => {
+  const { data } = await api.get<import("@/types").VendorAnalytics>("/vendors/me/analytics");
+  return data;
+};
 import axios from "axios";
 
 import type {
