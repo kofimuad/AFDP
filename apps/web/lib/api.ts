@@ -320,6 +320,19 @@ export async function getIngredient(slug: string, lat?: number, lng?: number): P
   return data;
 }
 
+// --- ENGAGEMENT TRACKING ---
+// Fire-and-forget; never throw so it can't break the UI.
+export async function trackView(
+  entityType: "vendor" | "food" | "ingredient",
+  entityId: string
+): Promise<void> {
+  try {
+    await api.post("/events/view", { entity_type: entityType, entity_id: entityId });
+  } catch {
+    // ignore — analytics must never break the page
+  }
+}
+
 // --- SAVED COLLECTION (M6 SCRUM-37) ---
 
 export interface SavedCollection {
