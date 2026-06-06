@@ -1,135 +1,110 @@
-export const metadata = {
-  title: "Advertise Your Business | AFDP",
-  description:
-    "Reach thousands of African food lovers. List your restaurant or grocery store on AFDP.",
-};
-import { Check, X } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import { FAQAccordion } from "@/components/advertise/FAQAccordion";
+import { PlanComparison } from "@/components/advertise/PlanComparison";
+import { PricingPlans } from "@/components/advertise/PricingPlans";
+
+export const metadata = {
+  title: "Grow with AFDP — Pricing & Plans",
+  description:
+    "Reach thousands of people searching for authentic African food near them. Start free, upgrade when you're ready."
+};
 
 const faqItems = [
   {
-    question: "How does featured placement work?",
+    question: "Is the Basic plan really free forever?",
     answer:
-      "Featured businesses appear at the top of search results and are highlighted with a special badge on the map, making them more visible to users searching for African food nearby."
+      "Yes. The Basic listing is permanently free. We only charge for Featured and Premium features that actively boost your visibility and analytics."
   },
   {
-    question: "Can I cancel anytime?",
-    answer: "Yes. All paid plans are month-to-month with no contracts. You can cancel or downgrade at any time from your dashboard."
+    question: "Can I cancel my plan at any time?",
+    answer:
+      "Absolutely. You can cancel or downgrade your Featured or Premium plan at any time from your dashboard. You keep the benefits until the end of your billing period, then revert to Basic."
   },
   {
-    question: "How do I get verified?",
+    question: "How long does verification take?",
     answer:
-      "After registering your business, our team reviews your listing within 48 hours. Verified businesses get a checkmark badge and higher trust with users."
+      "Most listings are verified within 24 hours. Our team reviews your business details and may reach out to confirm your address and ownership before issuing the Verified badge."
+  },
+  {
+    question: "What's the difference between Featured and Premium?",
+    answer:
+      "Featured gives you a badge, search priority, unlimited menu items, and analytics. Premium additionally includes homepage carousel placement, a custom brand profile page, a dedicated account manager, and multi-location support."
+  },
+  {
+    question: "Can I pay annually and save?",
+    answer:
+      "Yes. Toggle the billing switch above to see annual pricing — it's 20% cheaper than paying month-by-month."
   }
 ];
 
 export default function AdvertisePage() {
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-24 md:px-6">
-      <section className="rounded-[var(--radius-xl)] bg-[var(--color-primary)] px-6 pb-12 pt-20 text-[var(--color-text-inverse)]">
-        <h1 className="display-font text-4xl md:text-5xl">Reach Thousands of African Food Lovers</h1>
-        <p className="mt-3 max-w-3xl text-sm md:text-base">
-          Promote your business to diaspora communities actively searching for African food
+    <main className="pb-16">
+      {/* Hero */}
+      <section
+        className="px-4 py-16 text-center text-white md:px-6 md:py-20"
+        style={{ background: "linear-gradient(135deg,#1A0F08 0%,#2D1508 100%)" }}
+      >
+        <h1 className="display-font mx-auto max-w-2xl text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
+          Grow your business with <span className="text-[#F0845A]">AFDP</span>
+        </h1>
+        <p className="mx-auto mt-4 max-w-lg text-base text-white/70">
+          Reach thousands of people searching for authentic African food near them. Start free, upgrade when you&rsquo;re ready.
         </p>
       </section>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <article className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-white p-6 text-[var(--color-text-primary)] shadow-[var(--shadow-sm)] dark:bg-[var(--color-surface)]">
-          <p className="display-font text-2xl text-[var(--color-text-primary)]">Basic</p>
-          <p className="mt-1 text-3xl font-semibold text-[var(--color-text-primary)]">$0/month</p>
-          <ul className="mt-4 space-y-2 text-sm text-[var(--color-text-muted)]">
-            <li className="flex items-center gap-2">
-              <Check size={14} /> Basic listing on the map
-            </li>
-            <li className="flex items-center gap-2">
-              <Check size={14} /> Business name and address
-            </li>
-            <li className="flex items-center gap-2">
-              <Check size={14} /> Up to 5 menu items
-            </li>
-            <li className="flex items-center gap-2">
-              <X size={14} /> Featured placement
-            </li>
-            <li className="flex items-center gap-2">
-              <X size={14} /> Analytics dashboard
-            </li>
-            <li className="flex items-center gap-2">
-              <X size={14} /> Priority search ranking
-            </li>
-          </ul>
-          <Link href="/vendors/register" className="mt-6 inline-block rounded-[var(--radius-md)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold">
-            Get Started Free
-          </Link>
-        </article>
-
-        <article className="relative rounded-[var(--radius-xl)] border-2 border-[var(--color-primary)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-lg)] dark:bg-[var(--color-surface)]">
-          <span className="absolute -top-3 left-4 rounded-[var(--radius-full)] bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-[var(--color-text-inverse)]">
-            Most Popular
-          </span>
-          <p className="display-font text-2xl text-[var(--color-text-primary)]">Featured</p>
-          <p className="mt-1 text-3xl font-semibold text-[var(--color-text-primary)]">$29/month</p>
-          <ul className="mt-4 space-y-2 text-sm text-[var(--color-text-muted)]">
-            <li className="flex items-center gap-2">
-              <Check size={14} /> Everything in Basic
-            </li>
-            <li className="flex items-center gap-2">
-              <Check size={14} /> Featured badge on listing
-            </li>
-            <li className="flex items-center gap-2">
-              <Check size={14} /> Priority placement in search
-            </li>
-            <li className="flex items-center gap-2">
-              <Check size={14} /> Up to 20 menu items
-            </li>
-            <li className="flex items-center gap-2">
-              <Check size={14} /> Basic analytics
-            </li>
-            <li className="flex items-center gap-2">
-              <X size={14} /> Custom promotional banners
-            </li>
-          </ul>
-          <Link
-            href="/vendors/register"
-            className="mt-6 inline-block rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-inverse)]"
-          >
-            Start Featured
-          </Link>
-        </article>
-
-        <article className="rounded-[var(--radius-xl)] border border-transparent bg-[#0F0E0D] p-6 text-white shadow-[var(--shadow-md)] dark:border dark:border-white/20 dark:bg-[#1A1917]">
-          <p className="display-font text-2xl text-white">Premium</p>
-          <p className="mt-1 text-3xl font-semibold text-white">$79/month</p>
-          <ul className="mt-4 space-y-2 text-sm text-white/80">
-            <li className="flex items-center gap-2 text-white">
-              <Check size={14} /> Everything in Featured
-            </li>
-            <li className="flex items-center gap-2 text-white">
-              <Check size={14} /> Custom promotional banners
-            </li>
-            <li className="flex items-center gap-2 text-white">
-              <Check size={14} /> Full analytics dashboard
-            </li>
-            <li className="flex items-center gap-2 text-white">
-              <Check size={14} /> Unlimited menu items
-            </li>
-            <li className="flex items-center gap-2 text-white">
-              <Check size={14} /> Homepage featured section placement
-            </li>
-            <li className="flex items-center gap-2 text-white">
-              <Check size={14} /> Dedicated support
-            </li>
-          </ul>
-          <Link href="/vendors/register" className="mt-6 inline-block rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white">
-            Go Premium
-          </Link>
-        </article>
+      {/* Plans */}
+      <section className="mx-auto -mt-8 w-full max-w-6xl px-4 md:px-6">
+        <PricingPlans />
       </section>
 
-      <section className="mt-10">
-        <h2 className="display-font text-3xl text-[var(--color-text-primary)]">Frequently Asked Questions</h2>
+      {/* Comparison */}
+      <section className="mx-auto w-full max-w-5xl px-4 py-16 md:px-6">
+        <h2 className="display-font mb-8 text-center text-2xl font-extrabold tracking-tight text-[var(--color-text-primary)] sm:text-3xl">
+          Compare plans
+        </h2>
+        <PlanComparison />
+      </section>
+
+      {/* FAQ */}
+      <section className="mx-auto w-full max-w-3xl px-4 pb-16 md:px-6">
+        <h2 className="display-font mb-6 text-center text-2xl font-extrabold tracking-tight text-[var(--color-text-primary)] sm:text-3xl">
+          Frequently Asked Questions
+        </h2>
         <FAQAccordion items={faqItems} />
+      </section>
+
+      {/* Final CTA */}
+      <section className="mx-auto w-full max-w-7xl px-4 md:px-6">
+        <div
+          className="rounded-[var(--radius-xl)] px-6 py-14 text-center md:px-10"
+          style={{ background: "linear-gradient(135deg,var(--color-primary) 0%,#C05E18 100%)" }}
+        >
+          <h2 className="display-font text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+            Ready to reach more customers?
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-base text-white/80">
+            Join the African food businesses already on AFDP. Start with the free Basic plan and upgrade whenever
+            you&rsquo;re ready.
+          </p>
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/vendors/register"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-base font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-light)]"
+            >
+              Register Free
+              <ArrowRight size={16} strokeWidth={2.5} />
+            </Link>
+            <a
+              href="mailto:sales@afdp.io?subject=AFDP%20plans"
+              className="inline-flex items-center rounded-full border-[1.5px] border-white/40 px-7 py-3 text-sm font-medium text-white/90 transition hover:bg-white/10 hover:text-white"
+            >
+              Contact sales
+            </a>
+          </div>
+        </div>
       </section>
     </main>
   );
