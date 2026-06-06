@@ -32,7 +32,7 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
               onClick={() => toggleItem(index)}
               className="relative flex w-full items-center justify-between px-4 py-3 text-left transition-colors duration-150 hover:bg-[var(--color-surface-hover)]"
             >
-              <span className={`text-sm font-semibold ${isOpen ? "text-[#C8522A]" : "text-[var(--color-text-primary)]"}`}>{item.question}</span>
+              <span className={`text-sm font-semibold ${isOpen ? "text-[var(--color-primary)]" : "text-[var(--color-text-primary)]"}`}>{item.question}</span>
 
               <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2, ease: "easeInOut" }}>
                 <ChevronDown size={16} className="text-[var(--color-text-muted)]" />
@@ -46,7 +46,7 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
                     exit={{ scaleY: 0 }}
                     transition={{ duration: 0.2 }}
                     style={{ transformOrigin: "top" }}
-                    className="absolute left-0 top-0 h-full w-[3px] bg-[#C8522A]"
+                    className="absolute left-0 top-0 h-full w-[3px] bg-[var(--color-primary)]"
                   />
                 ) : null}
               </AnimatePresence>

@@ -12,6 +12,8 @@ export interface AuthUser {
   vendor_id: string | null;
   created_at?: string | null;
   profile_image_url?: string | null;
+  pref_lat?: number | null;
+  pref_lng?: number | null;
 }
 
 interface AuthState {

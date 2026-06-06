@@ -7,6 +7,7 @@ power the admin demand dashboard.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -140,6 +141,64 @@ async def top_viewed(entity_type: str, limit: int = 20, days: int = 30) -> list[
         limit,
     )
     return [dict(r) for r in rows]
+
+
+async def vendor_analytics(vendor_id: UUID) -> dict[str, Any]:
+    """Analytics scoped to a single vendor.
+
+    - views: vendor profile views (view_events)
+    - search_appearances: searches whose matched dish this vendor serves
+    - dish_views: views of dishes this vendor serves
+    - saves: times this vendor was saved to a collection
+    - views_this_week: vendor profile views per day for the last 7 days
+    """
+    totals_row = await fetch(
+        """
+        SELECT
+          (SELECT COUNT(*) FROM view_events
+             WHERE entity_type = 'vendor' AND entity_id = $1) AS views,
+          (SELECT COUNT(*) FROM search_events
+             WHERE food_match_id IN (
+               SELECT food_id FROM vendor_items
+               WHERE vendor_id = $1 AND food_id IS NOT NULL
+             )) AS search_appearances,
+          (SELECT COUNT(*) FROM view_events
+             WHERE entity_type = 'food' AND entity_id IN (
+               SELECT food_id FROM vendor_items
+               WHERE vendor_id = $1 AND food_id IS NOT NULL
+             )) AS dish_views,
+          (SELECT COUNT(*) FROM saved_items
+             WHERE vendor_id = $1) AS saves;
+        """,
+        vendor_id,
+    )
+    totals = (
+        {k: int(v or 0) for k, v in dict(totals_row[0]).items()}
+        if totals_row
+        else {"views": 0, "search_appearances": 0, "dish_views": 0, "saves": 0}
+    )
+
+    series_rows = await fetch(
+        """
+        SELECT date_trunc('day', created_at) AS day, COUNT(*) AS count
+        FROM view_events
+        WHERE entity_type = 'vendor' AND entity_id = $1
+          AND created_at >= (now() - interval '6 days')
+        GROUP BY day;
+        """,
+        vendor_id,
+    )
+    counts_by_day = {row["day"].date(): int(row["count"]) for row in series_rows}
+
+    today = datetime.now(timezone.utc).date()
+    views_this_week = []
+    for offset in range(6, -1, -1):
+        day = today - timedelta(days=offset)
+        views_this_week.append(
+            {"label": day.strftime("%a"), "count": counts_by_day.get(day, 0)}
+        )
+
+    return {"totals": totals, "views_this_week": views_this_week}
 
 
 async def platform_totals() -> dict[str, int]:

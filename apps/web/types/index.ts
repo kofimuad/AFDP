@@ -87,6 +87,16 @@ export interface VendorsQueryParams {
   page_size?: number;
 }
 
+export interface VendorAnalytics {
+  totals: {
+    views: number;
+    search_appearances: number;
+    dish_views: number;
+    saves: number;
+  };
+  views_this_week: { label: string; count: number }[];
+}
+
 export interface SearchParams {
   q: string;
   lat: number;

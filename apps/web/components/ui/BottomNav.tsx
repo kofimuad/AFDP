@@ -1,41 +1,82 @@
 "use client";
 
-import { Home, Search, UtensilsCrossed, User } from "lucide-react";
 import Link from "next/link";
+import type { Route } from "next";
 import { usePathname } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
 
-const NAV_ITEMS = [
-  { href: "/", label: "Home", icon: Home, match: (p: string) => p === "/" },
-  { href: "/search", label: "Search", icon: Search, match: (p: string) => p.startsWith("/search") },
-  { href: "/foods", label: "Browse", icon: UtensilsCrossed, match: (p: string) => p.startsWith("/foods") },
-  { href: "/profile", label: "Profile", icon: User, match: (p: string) => p.startsWith("/profile") }
-] as const;
+import { cn } from "@/lib/utils";
 
-export function BottomNav() {
-  const pathname = usePathname() ?? "/";
+export interface BottomNavItem {
+  href: Route;
+  label: string;
+  icon: LucideIcon;
+  /** Badge count displayed on the icon */
+  badge?: number;
+  /** Match strategy: exact (default) or prefix */
+  match?: "exact" | "prefix";
+}
+
+interface BottomNavProps {
+  items: BottomNavItem[];
+  className?: string;
+}
+
+export function BottomNav({ items, className }: BottomNavProps) {
+  const pathname = usePathname();
 
   return (
     <nav
-      aria-label="Primary mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur md:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      aria-label="Main navigation"
+      className={cn(
+        "fixed bottom-0 inset-x-0 z-40 md:hidden",
+        "border-t border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur",
+        "pb-[env(safe-area-inset-bottom)]",
+        className
+      )}
     >
-      <ul className="mx-auto flex max-w-md items-stretch justify-around">
-        {NAV_ITEMS.map(({ href, label, icon: Icon, match }) => {
-          const active = match(pathname);
+      <ul className="flex h-16 items-stretch" role="list">
+        {items.map((item) => {
+          const isActive =
+            item.match === "prefix"
+              ? pathname.startsWith(item.href)
+              : pathname === item.href;
+          const Icon = item.icon;
+
           return (
-            <li key={href} className="flex-1">
+            <li key={item.href} className="flex flex-1">
               <Link
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={`flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition ${
-                  active
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "relative flex flex-1 flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors",
+                  isActive
                     ? "text-[var(--color-primary)]"
                     : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-                }`}
+                )}
               >
-                <Icon size={22} strokeWidth={active ? 2.4 : 2} />
-                <span>{label}</span>
+                <span className="relative">
+                  <Icon
+                    size={22}
+                    strokeWidth={isActive ? 2.5 : 1.8}
+                    aria-hidden="true"
+                  />
+                  {item.badge != null && item.badge > 0 && (
+                    <span
+                      aria-label={`${item.badge} notifications`}
+                      className="absolute -right-2 -top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[var(--color-primary)] px-0.5 text-[10px] font-bold text-[var(--color-text-inverse)]"
+                    >
+                      {item.badge > 99 ? "99+" : item.badge}
+                    </span>
+                  )}
+                </span>
+                <span>{item.label}</span>
+                {isActive && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-0 h-0.5 w-8 rounded-full bg-[var(--color-primary)]"
+                  />
+                )}
               </Link>
             </li>
           );

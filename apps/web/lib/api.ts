@@ -3,6 +3,12 @@ export const getMyVendor = async (): Promise<Vendor> => {
   const { data } = await api.get<Vendor>("/vendors/me");
   return data;
 };
+
+// --- VENDOR: Analytics scoped to the authenticated vendor ---
+export const getMyVendorAnalytics = async (): Promise<import("@/types").VendorAnalytics> => {
+  const { data } = await api.get<import("@/types").VendorAnalytics>("/vendors/me/analytics");
+  return data;
+};
 import axios from "axios";
 
 import type {
@@ -13,7 +19,8 @@ import type {
   SearchParams,
   SearchResponse,
   Vendor,
-  VendorsQueryParams
+  VendorsQueryParams,
+  VendorSummary
 } from "@/types";
 
 
@@ -147,6 +154,8 @@ export interface MeResponse {
   vendor_id: string | null
   created_at: string | null
   profile_image_url: string | null
+  pref_lat: number | null
+  pref_lng: number | null
 }
 
 export const getMe = async (): Promise<MeResponse> => {
@@ -156,6 +165,23 @@ export const getMe = async (): Promise<MeResponse> => {
 
 export const updateProfile = async (data: { full_name: string }): Promise<MeResponse> => {
   const res = await api.patch<MeResponse>('/auth/me', data)
+  return res.data
+}
+
+export const changePassword = async (data: {
+  current_password: string
+  new_password: string
+}): Promise<void> => {
+  await api.post('/auth/me/password', data)
+}
+
+export const setMyLocation = async (lat: number, lng: number): Promise<MeResponse> => {
+  const res = await api.put<MeResponse>('/auth/me/location', { lat, lng })
+  return res.data
+}
+
+export const clearMyLocation = async (): Promise<MeResponse> => {
+  const res = await api.delete<MeResponse>('/auth/me/location')
   return res.data
 }
 
@@ -292,6 +318,47 @@ export async function getFood(slug: string, lat?: number, lng?: number): Promise
 export async function getIngredient(slug: string, lat?: number, lng?: number): Promise<IngredientDetail> {
   const { data } = await api.get<IngredientDetail>(`/ingredients/${slug}`, { params: { lat, lng } });
   return data;
+}
+
+// --- ENGAGEMENT TRACKING ---
+// Fire-and-forget; never throw so it can't break the UI.
+export async function trackView(
+  entityType: "vendor" | "food" | "ingredient",
+  entityId: string
+): Promise<void> {
+  try {
+    await api.post("/events/view", { entity_type: entityType, entity_id: entityId });
+  } catch {
+    // ignore — analytics must never break the page
+  }
+}
+
+// --- SAVED COLLECTION (M6 SCRUM-37) ---
+
+export interface SavedCollection {
+  foods: FoodSummary[];
+  vendors: VendorSummary[];
+}
+
+export async function getSavedCollection(): Promise<SavedCollection> {
+  const { data } = await api.get<SavedCollection>("/saved");
+  return data;
+}
+
+export async function saveFoodApi(slug: string): Promise<void> {
+  await api.post(`/saved/foods/${slug}`);
+}
+
+export async function unsaveFoodApi(slug: string): Promise<void> {
+  await api.delete(`/saved/foods/${slug}`);
+}
+
+export async function saveVendorApi(slug: string): Promise<void> {
+  await api.post(`/saved/vendors/${slug}`);
+}
+
+export async function unsaveVendorApi(slug: string): Promise<void> {
+  await api.delete(`/saved/vendors/${slug}`);
 }
 
 // --- ADMIN ANALYTICS ---

@@ -14,8 +14,14 @@ if config.config_file_name is not None:
 # ── Read DATABASE_URL from environment, override alembic.ini ──────────────────
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
-    # asyncpg URLs won't work with psycopg2 — ensure correct driver
+    # Normalize to the sync psycopg2 driver scheme that SQLAlchemy 2.0 expects.
+    # - asyncpg URLs won't work with psycopg2
+    # - SQLAlchemy 2.0 rejects the bare "postgres://" scheme (e.g. some hosted
+    #   Postgres providers hand it out), so promote it to "postgresql://"
     database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
+    database_url = database_url.replace("postgres+asyncpg://", "postgresql://")
+    if database_url.startswith("postgres://"):
+        database_url = "postgresql://" + database_url[len("postgres://"):]
     config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = None

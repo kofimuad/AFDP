@@ -46,7 +46,7 @@ export function GetDirectionsButton({ vendorLat, vendorLng, vendorName }: GetDir
       onClick={handleGetDirections}
       disabled={isGettingLocation}
       aria-label={`Get directions to ${vendorName}`}
-      className="inline-flex items-center gap-2 rounded-lg bg-[#C8522A] px-6 py-3 text-white transition-colors hover:bg-[#A8401E] disabled:cursor-not-allowed disabled:opacity-70"
+      className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-6 py-3 text-white transition-colors hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-70"
     >
       {isGettingLocation ? <Loader2 size={16} className="animate-spin" /> : <Navigation2 size={16} />}
       {isGettingLocation ? "Getting location..." : "Get Directions"}

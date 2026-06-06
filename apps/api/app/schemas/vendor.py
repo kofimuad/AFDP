@@ -6,6 +6,29 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.schemas.shared import FoodSummary, IngredientSummary, VendorSummary
 
 
+class VendorAnalyticsTotals(BaseModel):
+    """Headline counts for a vendor's dashboard."""
+
+    views: int = 0
+    search_appearances: int = 0
+    dish_views: int = 0
+    saves: int = 0
+
+
+class VendorViewsPoint(BaseModel):
+    """A single day in the views-this-week series."""
+
+    label: str
+    count: int = 0
+
+
+class VendorAnalyticsOut(BaseModel):
+    """Vendor-scoped analytics payload."""
+
+    totals: VendorAnalyticsTotals
+    views_this_week: list[VendorViewsPoint] = Field(default_factory=list)
+
+
 class VendorRegisterIn(BaseModel):
     """Payload for public vendor self-registration."""
 

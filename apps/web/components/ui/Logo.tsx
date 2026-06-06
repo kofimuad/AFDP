@@ -2,46 +2,50 @@ import { cn } from "@/lib/utils";
 
 interface LogoProps {
   variant: "dark" | "light";
+  /** Icon size in px (wordmark scales with it). Default 30. */
+  size?: number;
   className?: string;
 }
 
-export function Logo({ variant, className }: LogoProps) {
+export function Logo({ variant, size = 30, className }: LogoProps) {
   const isLight = variant === "light";
 
   return (
-    <div className={cn("inline-flex items-center gap-3", className)}>
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <ellipse cx="18" cy="18" rx="10" ry="3.2" stroke="#C8522A" strokeWidth="2" />
-        <path d="M8 18.5C8.8 24 12.4 28 18 28C23.6 28 27.2 24 28 18.5" stroke="#C8522A" strokeWidth="2" strokeLinecap="round" />
-        <path d="M14 8.5C13.2 9.8 13 11.1 14 12.6C15 14.1 14.8 15.2 14 16.4" stroke="#C8522A" strokeWidth="2" strokeLinecap="round" />
-        <path d="M22 7.8C21.2 9 21 10.3 22 11.7C23 13 22.8 14.2 22 15.4" stroke="#C8522A" strokeWidth="2" strokeLinecap="round" />
+    <div className={cn("inline-flex items-center gap-2.5", className)}>
+      {/* Gradient square mark: stylized "A" + map-pin dot (discovery + Africa) */}
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 32 32"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        className="shrink-0"
+      >
+        <defs>
+          <linearGradient id="afdpLogoGradient" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#FF8A3D" />
+            <stop offset="1" stopColor="#C05E18" />
+          </linearGradient>
+        </defs>
+        <rect width="32" height="32" rx="9" fill="url(#afdpLogoGradient)" />
+        <circle cx="16" cy="5.6" r="1.4" fill="white" />
+        <path
+          d="M16 8.4 L8.6 24 L12.3 24 L13.6 21 L18.4 21 L19.7 24 L23.4 24 L16 8.4 Z M14.6 18.4 L16 15.2 L17.4 18.4 Z"
+          fill="white"
+          fillRule="evenodd"
+        />
       </svg>
 
-      <div className="flex flex-col leading-tight">
-        <span
-          className={cn(
-            "display-font text-xl font-bold",
-            isLight ? "text-white" : "text-[var(--color-text-primary)]"
-          )}
-        >
-          AFDP
-        </span>
-        <span
-          className={cn(
-            "hidden text-[0.55rem] font-medium uppercase md:block",
-            isLight ? "text-white/50" : "text-[var(--color-text-muted)]"
-          )}
-          style={{ letterSpacing: "0.18em", fontFamily: "var(--font-body)" }}
-        >
-          African Food Discovery
-        </span>
-      </div>
+      <span
+        className={cn(
+          "display-font font-extrabold tracking-tight leading-none",
+          isLight ? "text-white" : "text-[var(--color-text-primary)]"
+        )}
+        style={{ fontSize: `${Math.round(size * 0.63)}px` }}
+      >
+        AFDP
+      </span>
     </div>
   );
 }
-
-// FLUTTER NOTE:
-// This component maps to: Row with custom painted icon + two text styles
-// Design tokens used: --font-display, --font-body, --color-text-primary, --color-text-muted
-// State management equivalent: Stateless widget
-// API call: None

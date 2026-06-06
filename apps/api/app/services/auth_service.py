@@ -73,7 +73,7 @@ async def get_current_user(
 
     user_row = await fetchrow(
         """
-        SELECT id, email, full_name, role, vendor_id, is_active, created_at, profile_image_url
+        SELECT id, email, full_name, role, vendor_id, is_active, created_at, profile_image_url, pref_lat, pref_lng
         FROM users
         WHERE id = $1;
         """,
@@ -93,6 +93,8 @@ async def get_current_user(
         "is_active": user_row["is_active"],
         "created_at": user_row["created_at"],
         "profile_image_url": user_row["profile_image_url"],
+        "pref_lat": user_row["pref_lat"],
+        "pref_lng": user_row["pref_lng"],
     }
 
 async def get_optional_user(

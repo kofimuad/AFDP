@@ -1,17 +1,34 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Clock, Eye, EyeOff, LayoutDashboard, MapPin, ShoppingBasket, Store, UtensilsCrossed } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import Map, { Marker } from "react-map-gl";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, FormField } from "@/components/ui/input";
+import {
+  MultiStepForm,
+  StepContent,
+  StepIndicator,
+  StepNav,
+  type Step
+} from "@/components/ui/MultiStepForm";
 import { registerVendorWithAuth } from "@/lib/api";
 import { useAuthStore } from "@/lib/store/authStore";
-import type { RegisterVendorPayload, VendorType } from "@/types";
+import { useToast } from "@/lib/store/toastStore";
+import { cn } from "@/lib/utils";
+import type { VendorType } from "@/types";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const DC_FALLBACK = { lat: 38.9072, lng: -77.0369 };
+
+const STEPS: Step[] = [
+  { id: "account", title: "Account" },
+  { id: "business", title: "Business" },
+  { id: "location", title: "Location" }
+];
 
 interface FormState {
   fullName: string;
@@ -23,7 +40,6 @@ interface FormState {
   address: string;
   phone: string;
   website: string;
-  image_url: string;
 }
 
 const INITIAL_FORM: FormState = {
@@ -35,79 +51,67 @@ const INITIAL_FORM: FormState = {
   type: "restaurant",
   address: "",
   phone: "",
-  website: "",
-  image_url: ""
+  website: ""
 };
 
 export default function RegisterVendorPage() {
   const router = useRouter();
+  const { setAuth } = useAuthStore();
+  const { showToast } = useToast();
+
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { setAuth } = useAuthStore();
-  const [latitude, setLatitude] = useState<number>(DC_FALLBACK.lat);
-  const [longitude, setLongitude] = useState<number>(DC_FALLBACK.lng);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const [latitude, setLatitude] = useState(DC_FALLBACK.lat);
+  const [longitude, setLongitude] = useState(DC_FALLBACK.lng);
   const [hasMarker, setHasMarker] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  // Pre-fill location from the device on mount.
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setLatitude(DC_FALLBACK.lat);
-      setLongitude(DC_FALLBACK.lng);
-      setHasMarker(false);
-      return;
-    }
-
+    if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
+      (pos) => {
+        setLatitude(pos.coords.latitude);
+        setLongitude(pos.coords.longitude);
         setHasMarker(true);
       },
-      () => {
-        setLatitude(DC_FALLBACK.lat);
-        setLongitude(DC_FALLBACK.lng);
-        setHasMarker(false);
-      },
+      () => {},
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
     );
   }, []);
 
-  const selectedLocationText = useMemo(() => {
-    if (!hasMarker) return "Selected location: Not set";
-    return `Selected location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-  }, [hasMarker, latitude, longitude]);
-
-  const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  // ── Per-step validation ──
+  const validateAccount = (): boolean => {
+    if (form.fullName.trim().length < 2) return fail("Enter your full name.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return fail("Enter a valid email address.");
+    if (form.password.length < 8) return fail("Password must be at least 8 characters.");
+    if (form.password !== form.confirmPassword) return fail("Passwords do not match.");
+    return true;
   };
 
-  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-    setSuccessMessage(null);
-    setErrorMessage(null);
+  const validateBusiness = (): boolean => {
+    if (form.name.trim().length < 2) return fail("Enter your business name.");
+    if (form.address.trim().length < 4) return fail("Enter your business address.");
+    return true;
+  };
 
-    if (!hasMarker) {
-      setErrorMessage("Please place and drag the pin to your business location.");
-      setIsSubmitting(false);
-      return;
-    }
-    if (!form.fullName.trim() || !form.email.trim() || !form.password) {
-      setErrorMessage("Full name, email, and password are required.");
-      setIsSubmitting(false);
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      setErrorMessage("Passwords do not match.");
-      setIsSubmitting(false);
-      return;
-    }
+  const fail = (msg: string) => {
+    showToast(msg, "error");
+    return false;
+  };
+
+  const submitRegistration = async (): Promise<boolean> => {
+    if (!hasMarker) return fail("Drop a pin on your business location.");
+    setSubmitting(true);
     try {
-      const payload = {
+      const res = await registerVendorWithAuth({
         email: form.email.trim(),
         full_name: form.fullName.trim(),
         password: form.password,
@@ -117,170 +121,257 @@ export default function RegisterVendorPage() {
         lat: latitude,
         lng: longitude,
         phone: form.phone.trim() || undefined,
-        website: form.website.trim() || undefined,
-      };
-      const res = await registerVendorWithAuth(payload);
+        website: form.website.trim() || undefined
+      });
       setAuth(res.user, res.access_token, res.refresh_token);
-      setSuccessMessage(`Registration submitted for ${res.user.email}. Redirecting to dashboard...`);
-      setForm(INITIAL_FORM);
-      setTimeout(() => router.push('/dashboard'), 1200);
-    } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Registration failed';
-      setErrorMessage(msg);
+      return true;
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+      if (axiosErr.response?.status === 409) {
+        fail("An account with this email already exists.");
+      } else {
+        fail(axiosErr.response?.data?.detail ?? "Registration failed. Please try again.");
+      }
+      return false;
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
+  // ── Completion (pending verification) ──
+  if (submitted) {
+    return (
+      <main className="mx-auto flex w-full max-w-lg flex-col items-center px-4 py-16 text-center md:px-6">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-success-light)] text-[var(--color-success)]">
+          <CheckCircle2 size={32} />
+        </span>
+        <h1 className="display-font mt-5 text-2xl font-extrabold tracking-tight text-[var(--color-text-primary)]">
+          Registration submitted!
+        </h1>
+        <p className="mt-2 max-w-sm text-sm text-[var(--color-text-muted)]">
+          Thanks for listing <strong className="text-[var(--color-text-primary)]">{form.name.trim()}</strong>. Our team
+          reviews new businesses and will verify your listing within 24 hours.
+        </p>
+
+        <span className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning-light)] px-3 py-1.5 text-xs font-bold text-[var(--color-warning)]">
+          <Clock size={13} />
+          Pending verification
+        </span>
+
+        <div className="mt-8 w-full space-y-2">
+          <Link
+            href="/dashboard"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)]"
+          >
+            <LayoutDashboard size={16} />
+            Go to your dashboard
+          </Link>
+          <Link
+            href="/dashboard?tab=listings"
+            className="flex w-full items-center justify-center gap-2 rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3 text-sm font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
+          >
+            Add your menu items
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  // ── Wizard ──
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 pb-10 pt-20 md:px-6">
-      <section className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-sm)]">
-        <h1 className="display-font text-4xl text-[var(--color-text-primary)]">List Your Business</h1>
-        <p className="mt-2 text-sm text-[var(--color-text-muted)]">Submit your restaurant or grocery store to appear in African food discovery results.</p>
+    <main className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6">
+      <header className="mb-6">
+        <h1 className="display-font text-3xl font-extrabold tracking-tight text-[var(--color-text-primary)]">
+          Register Your Business
+        </h1>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          List your restaurant or grocery store on AFDP — it&rsquo;s free to get started.
+        </p>
+      </header>
 
-        <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-          <h2 className="text-lg font-semibold mb-2">Create Your Vendor Account</h2>
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-[var(--color-text-primary)]">Full name</span>
-            <Input value={form.fullName} onChange={(e) => updateField("fullName", e.target.value)} required />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-[var(--color-text-primary)]">Email</span>
-            <Input type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} required />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-[var(--color-text-primary)]">Password</span>
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                value={form.password}
-                onChange={(e) => updateField("password", e.target.value)}
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 border-0 bg-transparent p-0 text-gray-400 hover:text-gray-600"
-                aria-label="Toggle password visibility"
-              >
-                {showPassword ? <span>🙈</span> : <span>👁️</span>}
-              </button>
-            </div>
-          </label>
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-[var(--color-text-primary)]">Confirm password</span>
-            <div className="relative">
-              <Input
-                type={showConfirmPassword ? "text" : "password"}
-                value={form.confirmPassword}
-                onChange={(e) => updateField("confirmPassword", e.target.value)}
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword((prev) => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 border-0 bg-transparent p-0 text-gray-400 hover:text-gray-600"
-                aria-label="Toggle confirm password visibility"
-              >
-                {showConfirmPassword ? <span>🙈</span> : <span>👁️</span>}
-              </button>
-            </div>
-          </label>
-          <h2 className="text-lg font-semibold mt-6 mb-2">Your Business Details</h2>
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-[var(--color-text-primary)]">Business name</span>
-            <Input value={form.name} onChange={(e) => updateField("name", e.target.value)} required />
-          </label>
+      <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
+        {/* Wizard */}
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+          <MultiStepForm steps={STEPS} onComplete={() => setSubmitted(true)}>
+            <StepIndicator className="mb-8" />
 
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-[var(--color-text-primary)]">Type</legend>
-            <div className="flex gap-2">
-              {[
-                ["restaurant", "Restaurant"],
-                ["grocery_store", "Grocery Store"]
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => updateField("type", value as VendorType)}
-                  className={`rounded-[var(--radius-md)] border px-4 py-2 text-sm ${
-                    form.type === value
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)]"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
+            {/* Step 1 — Account */}
+            <StepContent stepIndex={0} className="space-y-4">
+              <h2 className="display-font text-lg font-bold text-[var(--color-text-primary)]">Your account</h2>
+              <FormField label="Full name" htmlFor="reg-name" required>
+                <Input id="reg-name" value={form.fullName} onChange={(e) => set("fullName", e.target.value)} autoComplete="name" />
+              </FormField>
+              <FormField label="Email address" htmlFor="reg-email" required>
+                <Input id="reg-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} autoComplete="email" />
+              </FormField>
+              <FormField label="Password" htmlFor="reg-pw" required hint="Minimum 8 characters">
+                <Input
+                  id="reg-pw"
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) => set("password", e.target.value)}
+                  autoComplete="new-password"
+                  iconRight={
+                    <button type="button" onClick={() => setShowPassword((p) => !p)} aria-label={showPassword ? "Hide password" : "Show password"} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  }
+                />
+              </FormField>
+              <FormField label="Confirm password" htmlFor="reg-pw2" required>
+                <Input
+                  id="reg-pw2"
+                  type={showConfirm ? "text" : "password"}
+                  value={form.confirmPassword}
+                  onChange={(e) => set("confirmPassword", e.target.value)}
+                  autoComplete="new-password"
+                  iconRight={
+                    <button type="button" onClick={() => setShowConfirm((p) => !p)} aria-label={showConfirm ? "Hide password" : "Show password"} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
+                      {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  }
+                />
+              </FormField>
+              <StepNav nextLabel="Next: Business details" onNext={validateAccount} />
+            </StepContent>
 
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-[var(--color-text-primary)]">Address</span>
-            <Input value={form.address} onChange={(e) => updateField("address", e.target.value)} required />
-          </label>
+            {/* Step 2 — Business */}
+            <StepContent stepIndex={1} className="space-y-4">
+              <h2 className="display-font text-lg font-bold text-[var(--color-text-primary)]">Business details</h2>
+              <FormField label="Business name" htmlFor="reg-biz" required>
+                <Input id="reg-biz" value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Jollof Kitchen" />
+              </FormField>
 
-          <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)]">
-            <Map
-              mapboxAccessToken={MAPBOX_TOKEN}
-              mapStyle="mapbox://styles/mapbox/streets-v12"
-              latitude={latitude}
-              longitude={longitude}
-              zoom={12}
-              style={{ width: "100%", height: 350 }}
-              onClick={(event) => {
-                setLatitude(event.lngLat.lat);
-                setLongitude(event.lngLat.lng);
-                setHasMarker(true);
-              }}
-            >
-              {hasMarker ? (
-                <Marker
+              <div className="space-y-1.5">
+                <span className="block text-sm font-medium text-[var(--color-text-primary)]">Business type</span>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { value: "restaurant" as const, label: "Restaurant", desc: "Dine-in, takeaway, street food", Icon: UtensilsCrossed },
+                    { value: "grocery_store" as const, label: "Grocery Store", desc: "African ingredients & produce", Icon: ShoppingBasket }
+                  ].map(({ value, label, desc, Icon }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => set("type", value)}
+                      className={cn(
+                        "flex flex-col items-center gap-2 rounded-[var(--radius-md)] border-2 p-4 text-center transition",
+                        form.type === value
+                          ? "border-[var(--color-primary)] bg-[var(--color-primary-light)]"
+                          : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]"
+                      )}
+                    >
+                      <Icon size={24} className="text-[var(--color-primary)]" />
+                      <span className="text-sm font-semibold text-[var(--color-text-primary)]">{label}</span>
+                      <span className="text-xs leading-snug text-[var(--color-text-muted)]">{desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <FormField label="Address" htmlFor="reg-addr" required>
+                <Input id="reg-addr" value={form.address} onChange={(e) => set("address", e.target.value)} autoComplete="street-address" placeholder="14 Lagos Street, London SW9 8PF" />
+              </FormField>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField label="Phone" htmlFor="reg-phone" hint="Optional">
+                  <Input id="reg-phone" type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} autoComplete="tel" />
+                </FormField>
+                <FormField label="Website" htmlFor="reg-web" hint="Optional">
+                  <Input id="reg-web" type="url" value={form.website} onChange={(e) => set("website", e.target.value)} placeholder="https://" />
+                </FormField>
+              </div>
+              <StepNav nextLabel="Next: Pin your location" onNext={validateBusiness} />
+            </StepContent>
+
+            {/* Step 3 — Location */}
+            <StepContent stepIndex={2} className="space-y-4">
+              <h2 className="display-font text-lg font-bold text-[var(--color-text-primary)]">Pin your location</h2>
+              <p className="text-sm text-[var(--color-text-muted)]">
+                Drag the pin to your exact location so customers can find you.
+              </p>
+
+              <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)]">
+                <Map
+                  mapboxAccessToken={MAPBOX_TOKEN}
+                  mapStyle="mapbox://styles/mapbox/streets-v12"
                   latitude={latitude}
                   longitude={longitude}
-                  draggable
-                  onDragEnd={(event) => {
-                    setLatitude(event.lngLat.lat);
-                    setLongitude(event.lngLat.lng);
+                  zoom={13}
+                  style={{ width: "100%", height: 320 }}
+                  onClick={(e) => {
+                    setLatitude(e.lngLat.lat);
+                    setLongitude(e.lngLat.lng);
+                    setHasMarker(true);
                   }}
                 >
-                  <span className="text-2xl">📍</span>
-                </Marker>
-              ) : null}
-            </Map>
+                  {hasMarker && (
+                    <Marker
+                      latitude={latitude}
+                      longitude={longitude}
+                      draggable
+                      onDragEnd={(e) => {
+                        setLatitude(e.lngLat.lat);
+                        setLongitude(e.lngLat.lng);
+                      }}
+                    >
+                      <MapPin size={32} className="-translate-y-1/2 fill-[var(--color-primary)] text-white" />
+                    </Marker>
+                  )}
+                </Map>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-[var(--color-text-primary)]">
+                  {hasMarker ? `Pinned: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}` : "No location set yet"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!navigator.geolocation) return showToast("Location not supported", "error");
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        setLatitude(pos.coords.latitude);
+                        setLongitude(pos.coords.longitude);
+                        setHasMarker(true);
+                        showToast("Location updated", "success");
+                      },
+                      () => showToast("Couldn't get your location", "error"),
+                      { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
+                >
+                  <MapPin size={13} />
+                  Use my location
+                </button>
+              </div>
+
+              <StepNav submitLabel="Submit registration" onNext={submitRegistration} loading={submitting} />
+            </StepContent>
+          </MultiStepForm>
+        </div>
+
+        {/* What happens next */}
+        <aside className="hidden lg:block">
+          <div className="sticky top-24 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+            <p className="display-font text-base font-bold text-[var(--color-text-primary)]">What happens next?</p>
+            <ol className="mt-4 space-y-4">
+              {[
+                { Icon: Store, text: "Submit your business details" },
+                { Icon: Clock, text: "We verify your listing (≤ 24 hrs)" },
+                { Icon: CheckCircle2, text: "Your listing goes live on AFDP" },
+                { Icon: LayoutDashboard, text: "Add menu items from your dashboard" }
+              ].map(({ Icon, text }, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)]">
+                    <Icon size={15} />
+                  </span>
+                  <span className="pt-1.5 text-sm text-[var(--color-text-muted)]">{text}</span>
+                </li>
+              ))}
+            </ol>
           </div>
-
-          <p className="text-sm text-[var(--color-text-primary)]">{selectedLocationText}</p>
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Drag the pin to your exact business location. This helps customers find you on the map.
-          </p>
-
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-[var(--color-text-primary)]">Phone (optional)</span>
-            <Input value={form.phone} onChange={(e) => updateField("phone", e.target.value)} />
-          </label>
-
-          <label className="block space-y-1">
-            <span className="text-sm font-medium text-[var(--color-text-primary)]">Website (optional)</span>
-            <Input type="url" value={form.website} onChange={(e) => updateField("website", e.target.value)} />
-          </label>
-
-          <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? "Submitting..." : "Submit registration"}
-          </Button>
-        </form>
-
-        {successMessage ? (
-          <p className="mt-4 rounded-[var(--radius-md)] bg-[var(--color-grocery-light)] p-3 text-sm text-[var(--color-grocery)]">
-            {successMessage}
-          </p>
-        ) : null}
-        {errorMessage ? (
-          <p className="mt-4 rounded-[var(--radius-md)] bg-[var(--color-primary-light)] p-3 text-sm text-[var(--color-primary)]">
-            {errorMessage}
-          </p>
-        ) : null}
-      </section>
+        </aside>
+      </div>
     </main>
   );
 }

@@ -1,37 +1,51 @@
 "use client";
 
-import { ChevronDown, Map as MapIcon, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { MapView } from "@/components/map/MapView";
 import { SearchBar } from "@/components/search/SearchBar";
-import { SearchPanel, type SearchSort } from "@/components/search/SearchPanel";
+import { SearchFilters, type SearchFilter, type SearchSort } from "@/components/search/SearchFilters";
+import { SearchPanel } from "@/components/search/SearchPanel";
 import { getVendors } from "@/lib/api";
 import { useGeolocation } from "@/lib/hooks/useGeolocation";
 import { useSearch } from "@/lib/hooks/useSearch";
 import { useMapStore } from "@/lib/store/mapStore";
-import type { VendorSummary, VendorType } from "@/types";
+import type { VendorSummary } from "@/types";
 
-const SORT_OPTIONS: { value: SearchSort; label: string }[] = [
-  { value: "nearest", label: "Nearest" },
-  { value: "popular", label: "Most Popular" },
-  { value: "recent", label: "Recently Added" }
-];
+function filterFromType(type: string | null): SearchFilter {
+  if (type === "restaurant") return "restaurant";
+  if (type === "grocery_store") return "grocery";
+  return "all";
+}
 
-type ChipFilter =
-  | { kind: "all" }
-  | { kind: "type"; value: VendorType }
-  | { kind: "region"; value: string };
+function applyFilter(vendors: VendorSummary[], filter: SearchFilter): VendorSummary[] {
+  switch (filter) {
+    case "restaurant":
+      return vendors.filter((v) => v.type === "restaurant");
+    case "grocery":
+      return vendors.filter((v) => v.type === "grocery_store");
+    case "verified":
+      return vendors.filter((v) => v.is_verified);
+    default:
+      return vendors;
+  }
+}
 
-const FILTER_CHIPS: { label: string; filter: ChipFilter }[] = [
-  { label: "All", filter: { kind: "all" } },
-  { label: "Restaurants", filter: { kind: "type", value: "restaurant" } },
-  { label: "Grocery Stores", filter: { kind: "type", value: "grocery_store" } },
-  { label: "West African", filter: { kind: "region", value: "west-african" } },
-  { label: "Ethiopian", filter: { kind: "region", value: "ethiopian" } },
-  { label: "North African", filter: { kind: "region", value: "north-african" } }
-];
+function applySort(vendors: VendorSummary[], sort: SearchSort): VendorSummary[] {
+  const out = [...vendors];
+  if (sort === "az") {
+    out.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    // nearest — distance ascending, unknown distances last
+    out.sort((a, b) => {
+      const ad = a.distance_km ?? Number.POSITIVE_INFINITY;
+      const bd = b.distance_km ?? Number.POSITIVE_INFINITY;
+      return ad - bd;
+    });
+  }
+  return out;
+}
 
 function SearchPageContent() {
   const router = useRouter();
@@ -39,226 +53,142 @@ function SearchPageContent() {
 
   const initialQuery = searchParams.get("q") ?? "";
   const [query, setQuery] = useState(initialQuery);
-
-  const typeParam = searchParams.get("type");
-  const activeTypeFilter: VendorType | null = typeParam === "restaurant" || typeParam === "grocery_store" ? typeParam : null;
-  const activeRegionFilter = searchParams.get("region");
-
-  const [prefilteredVendors, setPrefilteredVendors] = useState<VendorSummary[]>([]);
-  const [isPrefilterLoading, setIsPrefilterLoading] = useState(false);
+  const [filter, setFilter] = useState<SearchFilter>(filterFromType(searchParams.get("type")));
   const [sort, setSort] = useState<SearchSort>("nearest");
-  const [isMapOpenMobile, setIsMapOpenMobile] = useState(false);
+
+  const [browseVendors, setBrowseVendors] = useState<VendorSummary[]>([]);
+  const [isBrowseLoading, setIsBrowseLoading] = useState(false);
 
   const { lat, lng, isLoading: isGeoLoading } = useGeolocation();
   const { activeVendorId, setActiveVendorId, setViewport } = useMapStore();
 
-  const { data, isLoading, isFetching } = useSearch({
-    q: query,
-    lat,
-    lng,
-    radiusKm: 10
-  });
+  const { data, isLoading, isFetching } = useSearch({ q: query, lat, lng, radiusKm: 10 });
 
+  const hasQuery = query.trim().length > 0;
+
+  // Keep the input in sync with the URL (e.g. suggestion links, "Browse
+  // Restaurants" deep-links). Only adopt a filter when the URL carries an
+  // explicit vendor type — otherwise we'd clobber the local "Verified"/"All".
   useEffect(() => {
-    const q = searchParams.get("q") ?? "";
-    setQuery(q);
+    setQuery(searchParams.get("q") ?? "");
+    const type = searchParams.get("type");
+    if (type === "restaurant" || type === "grocery_store") {
+      setFilter(filterFromType(type));
+    }
   }, [searchParams]);
 
+  // Reflect the query into the URL
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
     if (query.trim()) params.set("q", query.trim());
     else params.delete("q");
     router.replace(`/search?${params.toString()}`);
-  }, [query, router, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
+  // Center the map on the user
   useEffect(() => {
-    setViewport({
-      latitude: lat,
-      longitude: lng,
-      zoom: 11
-    });
+    setViewport({ latitude: lat, longitude: lng, zoom: 11 });
   }, [lat, lng, setViewport]);
 
+  // Browse mode (no query): fetch vendors for the active filter
   useEffect(() => {
-    if (!activeTypeFilter) {
-      setPrefilteredVendors([]);
-      setIsPrefilterLoading(false);
+    if (hasQuery || filter === "all") {
+      setBrowseVendors([]);
+      setIsBrowseLoading(false);
       return;
     }
 
-    let isMounted = true;
-    setIsPrefilterLoading(true);
+    let active = true;
+    setIsBrowseLoading(true);
+    const params =
+      filter === "restaurant"
+        ? { type: "restaurant" as const }
+        : filter === "grocery"
+        ? { type: "grocery_store" as const }
+        : { is_verified: true };
 
-    getVendors({ type: activeTypeFilter })
-      .then((vendors) => {
-        if (!isMounted) return;
-        setPrefilteredVendors(vendors);
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        setPrefilteredVendors([]);
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setIsPrefilterLoading(false);
-      });
+    getVendors(params)
+      .then((vendors) => active && setBrowseVendors(vendors))
+      .catch(() => active && setBrowseVendors([]))
+      .finally(() => active && setIsBrowseLoading(false));
 
     return () => {
-      isMounted = false;
+      active = false;
     };
-  }, [activeTypeFilter]);
+  }, [hasQuery, filter]);
 
-  const searchVendors = useMemo(() => {
-    if (!data) return [];
-    const ingredientStores = data.ingredients.flatMap((entry) => entry.stores);
-    const merged = [...data.restaurants, ...ingredientStores];
-    const deduped = new Map<string, VendorSummary>();
-    merged.forEach((vendor) => deduped.set(vendor.id, vendor));
-    return Array.from(deduped.values());
-  }, [data]);
-
-  const vendors = useMemo(() => {
-    if (query.trim()) return searchVendors;
-    if (activeTypeFilter) return prefilteredVendors;
-    return [];
-  }, [activeTypeFilter, prefilteredVendors, query, searchVendors]);
-
-  const resultCount = vendors.length;
-
-  const panelLoading = query.trim() ? isLoading || isFetching || isGeoLoading : isPrefilterLoading || isGeoLoading;
-
-  const handleVendorSelect = (vendor: VendorSummary) => {
-    setActiveVendorId(vendor.id);
-    if (vendor.lat != null && vendor.lng != null) {
-      setViewport({
-        latitude: vendor.lat,
-        longitude: vendor.lng,
-        zoom: 13.5
-      });
+  // Base vendor set (query results or browse), deduped
+  const baseVendors = useMemo(() => {
+    if (hasQuery) {
+      if (!data) return [];
+      const stores = data.ingredients.flatMap((b) => b.stores);
+      const merged = [...data.restaurants, ...stores];
+      const deduped = new Map<string, VendorSummary>();
+      merged.forEach((v) => deduped.set(v.id, v));
+      return Array.from(deduped.values());
     }
-  };
+    return browseVendors;
+  }, [hasQuery, data, browseVendors]);
 
-  const clearTypeFilter = () => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("type");
-    router.replace(`/search?${params.toString()}`);
-  };
+  const displayVendors = useMemo(
+    () => applySort(applyFilter(baseVendors, filter), sort),
+    [baseVendors, filter, sort]
+  );
 
-  const isChipActive = (filter: ChipFilter) => {
-    if (filter.kind === "all") return !activeTypeFilter && !activeRegionFilter;
-    if (filter.kind === "type") return activeTypeFilter === filter.value;
-    return activeRegionFilter === filter.value;
-  };
+  const panelLoading = hasQuery
+    ? isLoading || isFetching || isGeoLoading
+    : filter !== "all" && (isBrowseLoading || isGeoLoading);
 
-  const applyChip = (filter: ChipFilter) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (filter.kind === "all") {
-      params.delete("type");
-      params.delete("region");
-    } else if (filter.kind === "type") {
-      params.delete("region");
-      if (activeTypeFilter === filter.value) params.delete("type");
-      else params.set("type", filter.value);
-    } else {
-      params.delete("type");
-      if (activeRegionFilter === filter.value) params.delete("region");
-      else params.set("region", filter.value);
-    }
-    router.replace(`/search?${params.toString()}`);
-  };
+  const handleVendorSelect = useCallback(
+    (vendor: VendorSummary) => {
+      setActiveVendorId(vendor.id);
+      if (vendor.lat != null && vendor.lng != null) {
+        setViewport({ latitude: vendor.lat, longitude: vendor.lng, zoom: 13.5 });
+      }
+    },
+    [setActiveVendorId, setViewport]
+  );
+
+  const handleFilter = useCallback(
+    (next: SearchFilter) => {
+      setFilter(next);
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === "restaurant") params.set("type", "restaurant");
+      else if (next === "grocery") params.set("type", "grocery_store");
+      else params.delete("type");
+      router.replace(`/search?${params.toString()}`);
+    },
+    [router, searchParams]
+  );
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-6 pt-16 md:px-6">
-      <div className="sticky top-16 z-40 mb-4 bg-[var(--color-bg)]/95 py-2 backdrop-blur">
+    <main className="mx-auto w-full max-w-7xl px-4 pb-6 md:px-6">
+      {/* Search + filters (sticky) */}
+      <div className="sticky top-16 z-30 -mx-4 space-y-3 bg-[var(--color-bg)]/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
         <SearchBar value={query} onChange={setQuery} isLoading={panelLoading} mode="compact" />
-        <div className="-mx-4 mt-3 overflow-x-auto px-4 md:-mx-6 md:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex w-max gap-2">
-            {FILTER_CHIPS.map(({ label, filter }) => {
-              const active = isChipActive(filter);
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => applyChip(filter)}
-                  aria-pressed={active}
-                  className={`whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-medium transition ${
-                    active
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-text-inverse)]"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <SearchFilters filter={filter} onFilter={handleFilter} sort={sort} onSort={setSort} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[7fr_5fr]">
-        <aside className="space-y-4">
-          {activeTypeFilter ? (
-            <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-primary-light)] px-3 py-2">
-              <p className="text-sm font-medium text-[var(--color-primary)]">
-                Showing: {activeTypeFilter === "restaurant" ? "Restaurants only" : "Grocery Stores only"}
-              </p>
-              <button
-                type="button"
-                onClick={clearTypeFilter}
-                className="rounded-full p-1 text-[var(--color-primary)] transition hover:bg-[var(--color-primary)]/10"
-                aria-label="Clear type filter"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          ) : null}
-
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-            <p className="whitespace-nowrap text-sm font-medium text-[var(--color-text-muted)]">
-              {resultCount} {resultCount === 1 ? "result" : "results"} near you
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsMapOpenMobile((open) => !open)}
-                aria-pressed={isMapOpenMobile}
-                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] lg:hidden"
-              >
-                <MapIcon size={14} />
-                {isMapOpenMobile ? "Hide map" : "Map"}
-              </button>
-              <label className="relative inline-flex items-center">
-                <span className="sr-only">Sort results</span>
-                <select
-                  value={sort}
-                  onChange={(event) => setSort(event.target.value as SearchSort)}
-                  className="appearance-none rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] py-1.5 pl-3 pr-8 text-sm font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                >
-                  {SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="pointer-events-none absolute right-2.5 text-[var(--color-text-muted)]" />
-              </label>
-            </div>
-          </div>
-
+      <div className="mt-3 grid gap-5 lg:grid-cols-[380px_1fr]">
+        {/* Results list */}
+        <aside className="order-2 lg:order-1 lg:h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-1">
           <SearchPanel
-            data={data}
+            query={query}
             isLoading={panelLoading}
+            vendors={displayVendors}
+            foodMatch={hasQuery ? data?.food_match ?? null : null}
+            hasSearched={hasQuery}
             activeVendorId={activeVendorId}
             onVendorSelect={handleVendorSelect}
-            prefetchedVendors={!query.trim() ? prefilteredVendors : []}
-            sort={sort}
           />
         </aside>
 
-        <section
-          className={`${isMapOpenMobile ? "block" : "hidden"} lg:sticky lg:top-[140px] lg:block lg:self-start`}
-        >
-          <MapView vendors={vendors} onVendorClick={handleVendorSelect} />
+        {/* Map */}
+        <section className="order-1 lg:order-2 lg:sticky lg:top-32">
+          <div className="h-[45vh] overflow-hidden rounded-[var(--radius-lg)] lg:h-[calc(100vh-12rem)] [&>div]:!h-full">
+            <MapView vendors={displayVendors} onVendorClick={handleVendorSelect} />
+          </div>
         </section>
       </div>
     </main>
@@ -267,7 +197,9 @@ function SearchPageContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<main className="mx-auto w-full max-w-7xl px-4 pb-6 pt-16 md:px-6">Loading search...</main>}>
+    <Suspense
+      fallback={<main className="mx-auto w-full max-w-7xl px-4 pt-6 md:px-6">Loading search…</main>}
+    >
       <SearchPageContent />
     </Suspense>
   );

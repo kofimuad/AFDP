@@ -7,24 +7,19 @@ import { Suspense, useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { BarChart2, Eye, LayoutDashboard, MousePointer, Search, Settings, Shield, Store } from "lucide-react";
-import { addVendorDish, addVendorGrocery, removeVendorItem, updateVendor, updateVendorItem, uploadVendorImage, getMyVendor } from '@/lib/api';
+import { StatsGrid, type StatItem } from "@/components/ui/DataDisplay";
+import { VendorViewsChart } from "@/components/vendor/VendorViewsChart";
+import { BarChart2, Bookmark, CheckCircle2, Clock, Eye, LayoutDashboard, Search, Settings, Store, TrendingUp } from "lucide-react";
+import { addVendorDish, addVendorGrocery, getMyVendorAnalytics, removeVendorItem, updateVendor, updateVendorItem, uploadVendorImage, getMyVendor } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useToast } from '@/lib/store/toastStore';
-import type { Vendor, VendorItem } from '@/types';
+import type { Vendor, VendorAnalytics, VendorItem } from '@/types';
 
 const SIDEBAR_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "My Listings", icon: Store, href: "/dashboard?tab=listings" },
   { label: "Analytics", icon: BarChart2, href: "/dashboard?tab=analytics" },
   { label: "Settings", icon: Settings, href: "/dashboard?tab=settings" }
-] as const;
-
-const STATS = [
-  { label: "Total Views", value: "0", icon: Eye },
-  { label: "Profile Clicks", value: "0", icon: MousePointer },
-  { label: "Searches Appeared In", value: "0", icon: Search },
-  { label: "Verified Status", value: "Pending", icon: Shield }
 ] as const;
 
 export default function DashboardPage() {
@@ -41,6 +36,7 @@ function DashboardPageInner() {
   const tab = searchParams.get("tab") || "dashboard";
   const user = useAuthStore((state) => state.user);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [analytics, setAnalytics] = useState<VendorAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddDish, setShowAddDish] = useState(false);
   const [addDishVendorId, setAddDishVendorId] = useState<string | null>(null);
@@ -79,6 +75,9 @@ function DashboardPageInner() {
             phone: vendor.phone || "",
             website: vendor.website || "",
           })
+          getMyVendorAnalytics()
+            .then(setAnalytics)
+            .catch(() => setAnalytics(null))
         } else {
           setVendors([])
         }
@@ -97,11 +96,38 @@ function DashboardPageInner() {
     fetchMyVendor()
   }, [user?.vendor_id])
 
+  const vendor = vendors[0] ?? null;
+  const isVerified = vendor?.is_verified ?? false;
+  const statItems: StatItem[] = [
+    { label: "Total Views", value: analytics?.totals.views ?? 0, icon: Eye },
+    { label: "Search Appearances", value: analytics?.totals.search_appearances ?? 0, icon: Search },
+    { label: "Dish Views", value: analytics?.totals.dish_views ?? 0, icon: TrendingUp },
+    { label: "Saves", value: analytics?.totals.saves ?? 0, icon: Bookmark }
+  ];
+
   return (
     <ProtectedRoute requireRole="vendor">
-      <main className="mx-auto w-full max-w-7xl px-4 pb-10 pt-20 md:px-6">
-        <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
-          <aside className="rounded-[var(--radius-xl)] bg-[var(--color-dark)] p-4 text-white">
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6">
+        <div className="grid gap-5 lg:grid-cols-[240px_1fr]">
+          <aside className="h-fit rounded-[var(--radius-xl)] bg-[var(--color-dark)] p-4 text-white">
+            {/* Business brand + verification status */}
+            <div className="mb-4 flex items-center gap-3 rounded-[var(--radius-lg)] bg-white/10 p-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-white/10 text-sm font-bold">
+                {vendor?.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={vendor.image_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span>{vendor?.name?.[0] ?? "?"}</span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{vendor?.name ?? "Your business"}</p>
+                <p className={`flex items-center gap-1 text-xs ${isVerified ? "text-[#7BE0A6]" : "text-[#F0C674]"}`}>
+                  {isVerified ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                  {isVerified ? "Verified & Live" : "Pending verification"}
+                </p>
+              </div>
+            </div>
             <nav className="space-y-2">
               {SIDEBAR_ITEMS.map((item) => (
                 <button
@@ -123,19 +149,43 @@ function DashboardPageInner() {
 
           <section className="space-y-6">
             {tab === "dashboard" && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {STATS.map((stat) => (
-                  <article
-                    key={stat.label}
-                    className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-sm)]"
+              <div className="space-y-6">
+                {/* Business header */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h1 className="display-font text-2xl font-extrabold tracking-tight text-[var(--color-text-primary)]">
+                      {vendor ? `${vendor.name} dashboard` : "Vendor dashboard"}
+                    </h1>
+                    <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                      {vendor ? "Here's how your business is performing." : "Set up your business to see analytics."}
+                    </p>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${
+                      isVerified
+                        ? "bg-[var(--color-success-light)] text-[var(--color-success)]"
+                        : "bg-[var(--color-warning-light)] text-[var(--color-warning)]"
+                    }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-[var(--color-text-muted)]">{stat.label}</p>
-                      <stat.icon size={16} className="text-[var(--color-text-muted)]" />
-                    </div>
-                    <p className="display-font mt-4 text-4xl text-[var(--color-text-primary)]">{stat.value}</p>
-                  </article>
-                ))}
+                    {isVerified ? <CheckCircle2 size={13} /> : <Clock size={13} />}
+                    {isVerified ? "Verified & Live" : "Pending verification"}
+                  </span>
+                </div>
+
+                {/* Stat cards */}
+                <StatsGrid stats={statItems} columns={4} />
+
+                {/* Views this week */}
+                <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-sm)]">
+                  <h2 className="display-font mb-4 text-lg font-bold text-[var(--color-text-primary)]">
+                    Views This Week
+                  </h2>
+                  {analytics ? (
+                    <VendorViewsChart data={analytics.views_this_week} />
+                  ) : (
+                    <div className="h-40 animate-pulse rounded-[var(--radius-md)] bg-[var(--color-surface-hover)]" />
+                  )}
+                </div>
               </div>
             )}
 
@@ -445,19 +495,30 @@ function DashboardPageInner() {
             </Modal>
 
             {tab === "analytics" && (
-              <section className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-sm)]">
-                <h2 className="display-font text-2xl text-[var(--color-text-primary)]">Analytics</h2>
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-lg border p-4">
-                    <h3 className="font-semibold mb-2">Dish Views</h3>
-                    <p className="text-sm text-[var(--color-text-muted)]">See how many times your dishes have been viewed by users. (Analytics integration needed)</p>
-                  </div>
-                  <div className="rounded-lg border p-4">
-                    <h3 className="font-semibold mb-2">Searches Appeared In</h3>
-                    <p className="text-sm text-[var(--color-text-muted)]">Track how often your listings appear in user searches. (Analytics integration needed)</p>
-                  </div>
+              <div className="space-y-6">
+                <div>
+                  <h1 className="display-font text-2xl font-extrabold tracking-tight text-[var(--color-text-primary)]">Analytics</h1>
+                  <p className="mt-1 text-sm text-[var(--color-text-muted)]">Engagement across your listing, all time.</p>
                 </div>
-              </section>
+
+                <StatsGrid stats={statItems} columns={4} />
+
+                <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-sm)]">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="display-font text-lg font-bold text-[var(--color-text-primary)]">Profile Views — Last 7 Days</h2>
+                    <BarChart2 size={18} className="text-[var(--color-text-muted)]" />
+                  </div>
+                  {analytics ? (
+                    <VendorViewsChart data={analytics.views_this_week} />
+                  ) : (
+                    <div className="h-40 animate-pulse rounded-[var(--radius-md)] bg-[var(--color-surface-hover)]" />
+                  )}
+                </div>
+
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Views and saves are tracked as people browse AFDP. Search appearances count searches whose matched dish you serve.
+                </p>
+              </div>
             )}
 
             {tab === "settings" && (
