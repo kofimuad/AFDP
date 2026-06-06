@@ -136,9 +136,57 @@ seeder upserts by slug, so running it again just enriches the existing rows.
   or recipe mappings. The `CUISINE_FOODS` / `CUISINE_INGREDIENTS` dicts control
   how vendors get linked to items at seed time.
 
+## Vendor images
+
+`source_vendors` now captures an `image_url` for each vendor when the source
+supports it:
+
+- **Google Places** — the Text Search response includes `photos[*].name`. After
+  the sweep finishes, we resolve each first-photo `name` to a persistent
+  `googleusercontent.com` URL via the Place Photos endpoint (called with
+  `skipHttpRedirect=true` so we get JSON + a `photoUri` back). Costs ~$7 per
+  1,000 resolved photos.
+- **Yelp Fusion** — businesses come back with an `image_url` already, so we
+  just keep it.
+- **Foursquare / OSM** — no reliable image field, left empty.
+
+`seed_vendors.py` upserts `image_url` using `COALESCE(EXCLUDED.image_url,
+vendors.image_url)` so re-seeding only fills in missing images and never
+overwrites a good one with `NULL`.
+
+### Backfilling existing vendors (cheap path)
+
+If you already have vendors in the DB and just want to add images without
+re-running the full sweep, use the dedicated backfill script:
+
+```bash
+export DATABASE_URL=postgres://...
+export GOOGLE_PLACES_API_KEY=...
+
+# Dry-run first to see what would happen
+python -m scripts.backfill_vendor_images --dry-run --limit 10
+
+# Real run — updates vendors where image_url IS NULL
+python -m scripts.backfill_vendor_images
+
+# Re-fetch even for vendors that already have an image
+python -m scripts.backfill_vendor_images --overwrite
+```
+
+The script runs one Text Search (tightly biased to the vendor's stored
+coordinates) + one Photo fetch per vendor. Budget ~$40 per 1,000 vendors.
+
+### Attribution
+
+Google requires a "Powered by Google" attribution wherever Places photos are
+shown. The photos returned also carry `authorAttributions` that Google wants
+surfaced. If we later show a byline on vendor cards, pull them from the
+`places.photos.authorAttributions` field.
+
 ## Files
 
 - [scripts/source_vendors.py](source_vendors.py) — CLI entrypoint
+- [scripts/backfill_vendor_images.py](backfill_vendor_images.py) — image-only backfill for existing DB vendors
 - [scripts/sourcing/orchestrator.py](sourcing/orchestrator.py) — sweep + dedup
 - [scripts/sourcing/providers.py](sourcing/providers.py) — Google / Yelp / Foursquare / OSM
 - [scripts/sourcing/cities.py](sourcing/cities.py) — target cities

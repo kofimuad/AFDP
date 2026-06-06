@@ -36,10 +36,12 @@ class GooglePlacesProvider(Provider):
 
     name = "google"
     URL = "https://places.googleapis.com/v1/places:searchText"
+    PHOTO_URL_TEMPLATE = "https://places.googleapis.com/v1/{name}/media"
     FIELD_MASK = (
         "places.id,places.displayName,places.formattedAddress,places.location,"
         "places.nationalPhoneNumber,places.internationalPhoneNumber,"
-        "places.websiteUri,places.primaryType,places.types,nextPageToken"
+        "places.websiteUri,places.primaryType,places.types,"
+        "places.photos.name,nextPageToken"
     )
 
     def __init__(self, api_key: Optional[str]):
@@ -47,6 +49,31 @@ class GooglePlacesProvider(Provider):
 
     def enabled(self) -> bool:
         return bool(self.api_key)
+
+    async def resolve_photo_url(
+        self, client: httpx.AsyncClient, photo_name: str, max_height_px: int = 800
+    ) -> Optional[str]:
+        """Resolve a Google Places photo resource name to a googleusercontent URL.
+
+        Uses skipHttpRedirect=true so the response is JSON containing
+        ``photoUri``, which we can persist. Returns None on any failure.
+        """
+        if not self.api_key or not photo_name:
+            return None
+        url = self.PHOTO_URL_TEMPLATE.format(name=photo_name)
+        params = {
+            "key": self.api_key,
+            "maxHeightPx": max_height_px,
+            "skipHttpRedirect": "true",
+        }
+        try:
+            r = await client.get(url, params=params, timeout=20.0)
+            r.raise_for_status()
+        except httpx.HTTPError as e:
+            print(f"[google photo] {photo_name} -> error: {e}")
+            return None
+        data = r.json()
+        return data.get("photoUri")
 
     async def search(
         self, client: httpx.AsyncClient, query: str, city: dict, vendor_type: str
@@ -83,6 +110,8 @@ class GooglePlacesProvider(Provider):
                 name = (p.get("displayName") or {}).get("text") or ""
                 if not name:
                     continue
+                photos = p.get("photos") or []
+                photo_name = photos[0].get("name") if photos else None
                 results.append(
                     VendorRecord(
                         name=name,
@@ -97,6 +126,7 @@ class GooglePlacesProvider(Provider):
                         search_term=query,
                         country=city["country"],
                         city=city["name"],
+                        google_photo_name=photo_name,
                     )
                 )
             next_token = data.get("nextPageToken")
@@ -170,6 +200,7 @@ class YelpFusionProvider(Provider):
                         search_term=query,
                         country=city["country"],
                         city=city["name"],
+                        image_url=b.get("image_url") or None,
                     )
                 )
             if len(businesses) < 50:

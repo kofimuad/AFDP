@@ -141,11 +141,11 @@ async def _seed_vendor(
         """
         INSERT INTO vendors (
             id, name, slug, type, address, location, phone, website,
-            is_verified, is_featured
+            image_url, is_verified, is_featured
         ) VALUES (
             gen_random_uuid(), $1, $2, $3, $4,
             ST_SetSRID(ST_MakePoint($5, $6), 4326),
-            $7, $8, false, false
+            $7, $8, $9, false, false
         )
         ON CONFLICT (slug) DO UPDATE SET
             name = EXCLUDED.name,
@@ -153,7 +153,8 @@ async def _seed_vendor(
             address = EXCLUDED.address,
             location = EXCLUDED.location,
             phone = COALESCE(EXCLUDED.phone, vendors.phone),
-            website = COALESCE(EXCLUDED.website, vendors.website)
+            website = COALESCE(EXCLUDED.website, vendors.website),
+            image_url = COALESCE(EXCLUDED.image_url, vendors.image_url)
         RETURNING id;
         """,
         v["name"],
@@ -164,6 +165,7 @@ async def _seed_vendor(
         float(v["lat"]),
         v.get("phone"),
         v.get("website"),
+        v.get("image_url"),
     )
 
     cuisine = query_cuisine(v.get("search_term", ""))
