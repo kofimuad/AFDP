@@ -227,10 +227,10 @@ export function StepNav({
         Back
       </Button>
       <Button
-        type={isLast ? "submit" : "button"}
+        type="button"
         variant="primary"
         loading={loading}
-        onClick={isLast ? undefined : handleNext}
+        onClick={handleNext}
       >
         {isLast ? submitLabel : nextLabel}
       </Button>
