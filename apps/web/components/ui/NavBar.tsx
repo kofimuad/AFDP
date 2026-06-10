@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { LayoutDashboard, LogOut, Search, User } from "lucide-react";
+import { ChefHat, LayoutDashboard, LogOut, Search, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -94,6 +94,15 @@ export function NavBar() {
         </form>
 
         <div className="ml-auto flex items-center gap-2 md:gap-3">
+          {/* Cook it yourself — recipe catalog entry point (desktop) */}
+          <Link
+            href="/foods"
+            className="hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] md:inline-flex"
+          >
+            <ChefHat size={16} />
+            Cook it yourself
+          </Link>
+
           {!hasHydrated ? (
             <div className="h-9 w-20" aria-hidden />
           ) : (

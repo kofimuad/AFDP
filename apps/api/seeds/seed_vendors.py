@@ -25,6 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.sourcing.catalog import (  # noqa: E402
     CUISINE_FOODS,
     CUISINE_INGREDIENTS,
+    CUISINES,
+    FOOD_CUISINES,
     FOOD_INGREDIENTS,
     FOODS,
     INGREDIENTS,
@@ -52,22 +54,39 @@ async def _upsert_catalog(conn: asyncpg.Connection) -> tuple[dict[str, str], dic
         )
         region_ids[r] = rid
 
+    cuisine_ids: dict[str, str] = {}
+    for c in CUISINES:
+        cid = await conn.fetchval(
+            """
+            INSERT INTO cuisines (id, name, slug) VALUES (gen_random_uuid(), $1, $2)
+            ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+            RETURNING id;
+            """,
+            c,
+            slugify(c),
+        )
+        cuisine_ids[c] = cid
+
     food_ids: dict[str, str] = {}
     for food in FOODS:
         fid = await conn.fetchval(
             """
-            INSERT INTO foods (id, name, slug, description, image_url)
-            VALUES (gen_random_uuid(), $1, $2, $3, $4)
+            INSERT INTO foods (id, name, slug, description, image_url, prep_minutes, cook_minutes)
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)
             ON CONFLICT (slug) DO UPDATE SET
                 name = EXCLUDED.name,
                 description = EXCLUDED.description,
-                image_url = EXCLUDED.image_url
+                image_url = EXCLUDED.image_url,
+                prep_minutes = EXCLUDED.prep_minutes,
+                cook_minutes = EXCLUDED.cook_minutes
             RETURNING id;
             """,
             food["name"],
             slugify(food["name"]),
             food.get("description"),
             food_image_url(food["name"]),
+            food.get("prep_minutes"),
+            food.get("cook_minutes"),
         )
         food_ids[food["name"]] = fid
         rid = region_ids.get(food["region"])
@@ -81,6 +100,18 @@ async def _upsert_catalog(conn: asyncpg.Connection) -> tuple[dict[str, str], dic
                 fid,
                 rid,
             )
+        for cuisine_name in FOOD_CUISINES.get(food["name"], []):
+            cid = cuisine_ids.get(cuisine_name)
+            if cid:
+                await conn.execute(
+                    """
+                    INSERT INTO food_cuisines (food_id, cuisine_id)
+                    VALUES ($1, $2)
+                    ON CONFLICT DO NOTHING;
+                    """,
+                    fid,
+                    cid,
+                )
 
     ingredient_ids: dict[str, str] = {}
     for name in INGREDIENTS:

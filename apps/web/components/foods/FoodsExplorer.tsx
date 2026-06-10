@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, MapPin, Search, SlidersHorizontal } from "lucide-react";
+import { Clock, Loader2, MapPin, Search, SlidersHorizontal } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,10 +15,13 @@ type SortKey = "az" | "za" | "newest";
 interface FoodsExplorerProps {
   foods: FoodSummary[];
   regions: string[];
+  cuisines: string[];
   activeRegion: string | null;
+  activeCuisine: string | null;
 }
 
 const PAGE_SIZE = 12;
+const MAX_SUGGESTIONS = 8;
 
 const REGION_DOT: Record<string, string> = {
   "West African": "#E07020",
@@ -29,7 +32,30 @@ const REGION_DOT: Record<string, string> = {
   "Afro-Caribbean": "#C44536"
 };
 
-export function FoodsExplorer({ foods, regions, activeRegion }: FoodsExplorerProps) {
+// Build a /foods URL that preserves whichever filters are still active.
+function buildFoodsHref(region: string | null, cuisine: string | null): Route {
+  const sp = new URLSearchParams();
+  if (region) sp.set("region", region);
+  if (cuisine) sp.set("cuisine", cuisine);
+  const qs = sp.toString();
+  return (qs ? `/foods?${qs}` : "/foods") as Route;
+}
+
+// "20m prep · 45m cook" — gracefully omits whichever side is missing.
+function formatTimes(prep: number | null, cook: number | null): string | null {
+  const parts: string[] = [];
+  if (prep != null && prep > 0) parts.push(`${prep}m prep`);
+  if (cook != null && cook > 0) parts.push(`${cook}m cook`);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+export function FoodsExplorer({
+  foods,
+  regions,
+  cuisines,
+  activeRegion,
+  activeCuisine
+}: FoodsExplorerProps) {
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -38,9 +64,14 @@ export function FoodsExplorer({ foods, regions, activeRegion }: FoodsExplorerPro
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [locating, setLocating] = useState(false);
 
+  // Autocomplete state
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const searchBoxRef = useRef<HTMLDivElement | null>(null);
+
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // Client-side search + sort over the server-provided (region-filtered) set
+  // Client-side search + sort over the server-provided (region/cuisine-filtered) set
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const matched = q
@@ -63,10 +94,41 @@ export function FoodsExplorer({ foods, regions, activeRegion }: FoodsExplorerPro
     return sorted;
   }, [foods, query, sort]);
 
+  // Autocomplete suggestions: name-prefix matches rank first, then substring.
+  const suggestions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const matches = foods.filter((f) => f.name.toLowerCase().includes(q));
+    matches.sort((a, b) => {
+      const aStarts = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+      const bStarts = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+      if (aStarts !== bStarts) return aStarts - bStarts;
+      return a.name.localeCompare(b.name);
+    });
+    return matches.slice(0, MAX_SUGGESTIONS);
+  }, [foods, query]);
+
   // Reset the reveal window whenever the result set changes
   useEffect(() => {
     setVisible(PAGE_SIZE);
-  }, [query, sort, activeRegion]);
+  }, [query, sort, activeRegion, activeCuisine]);
+
+  // Keep the active suggestion index in range as suggestions change
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [query]);
+
+  // Close the autocomplete dropdown on outside click
+  useEffect(() => {
+    if (!suggestOpen) return;
+    const onMouseDown = (event: MouseEvent) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(event.target as Node)) {
+        setSuggestOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, [suggestOpen]);
 
   // Infinite scroll: reveal more as the sentinel enters the viewport
   useEffect(() => {
@@ -83,6 +145,28 @@ export function FoodsExplorer({ foods, regions, activeRegion }: FoodsExplorerPro
     observer.observe(node);
     return () => observer.disconnect();
   }, [filtered.length]);
+
+  function goToDish(slug: string) {
+    router.push(`/foods/${slug}` as Route);
+  }
+
+  function onSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (!suggestOpen || suggestions.length === 0) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex((i) => (i + 1) % suggestions.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+    } else if (event.key === "Enter") {
+      if (activeIndex >= 0 && activeIndex < suggestions.length) {
+        event.preventDefault();
+        goToDish(suggestions[activeIndex].slug);
+      }
+    } else if (event.key === "Escape") {
+      setSuggestOpen(false);
+    }
+  }
 
   function findNearMe() {
     if (!navigator.geolocation) {
@@ -101,6 +185,7 @@ export function FoodsExplorer({ foods, regions, activeRegion }: FoodsExplorerPro
   }
 
   const shown = filtered.slice(0, visible);
+  const hasFilter = !!activeRegion || !!activeCuisine;
 
   return (
     <div className="flex flex-col">
@@ -108,25 +193,93 @@ export function FoodsExplorer({ foods, regions, activeRegion }: FoodsExplorerPro
       <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-8 md:px-6">
         <div className="mx-auto w-full max-w-7xl">
           <h1 className="display-font text-3xl font-extrabold tracking-tight text-[var(--color-text-primary)] sm:text-4xl">
-            Explore African Dishes
+            Cook It Yourself
           </h1>
           <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            Browse the full directory of African cuisine — from street food to celebration feasts
+            Browse African dishes to make at home — search by name, then filter by cuisine and region
           </p>
 
-          {/* Search + Find Near Me */}
+          {/* Search (with autocomplete) + Find Near Me */}
           <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:items-center">
-            <div className="flex max-w-md flex-1 items-center gap-2.5 rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 shadow-[var(--shadow-sm)] focus-within:border-[var(--color-primary)]">
-              <Search size={16} className="shrink-0 text-[var(--color-text-muted)]" />
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search dishes by name or ingredient…"
-                aria-label="Search dishes"
-                className="min-w-0 flex-1 border-0 bg-transparent text-sm text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-muted)]"
-              />
+            <div ref={searchBoxRef} className="relative max-w-md flex-1">
+              <div
+                className="flex items-center gap-2.5 rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 shadow-[var(--shadow-sm)] focus-within:border-[var(--color-primary)]"
+              >
+                <Search size={16} className="shrink-0 text-[var(--color-text-muted)]" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setSuggestOpen(true);
+                  }}
+                  onFocus={() => setSuggestOpen(true)}
+                  onKeyDown={onSearchKeyDown}
+                  placeholder="Search dishes by name…"
+                  aria-label="Search dishes"
+                  role="combobox"
+                  aria-expanded={suggestOpen && suggestions.length > 0}
+                  aria-controls="dish-suggestions"
+                  aria-autocomplete="list"
+                  aria-activedescendant={
+                    activeIndex >= 0 ? `dish-suggestion-${activeIndex}` : undefined
+                  }
+                  autoComplete="off"
+                  className="min-w-0 flex-1 border-0 bg-transparent text-sm text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-muted)]"
+                />
+              </div>
+
+              {/* Autocomplete dropdown */}
+              {suggestOpen && suggestions.length > 0 && (
+                <ul
+                  id="dish-suggestions"
+                  role="listbox"
+                  className="absolute z-30 mt-2 max-h-80 w-full overflow-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] py-1.5 shadow-[var(--shadow-lg)]"
+                >
+                  {suggestions.map((food, i) => (
+                    <li key={food.id} role="presentation">
+                      <button
+                        type="button"
+                        id={`dish-suggestion-${i}`}
+                        role="option"
+                        aria-selected={i === activeIndex}
+                        onMouseEnter={() => setActiveIndex(i)}
+                        onClick={() => goToDish(food.slug)}
+                        className={cn(
+                          "flex w-full items-center gap-3 px-3 py-2 text-left transition",
+                          i === activeIndex
+                            ? "bg-[var(--color-surface-hover)]"
+                            : "hover:bg-[var(--color-surface-hover)]"
+                        )}
+                      >
+                        {food.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={food.image_url}
+                            alt=""
+                            loading="lazy"
+                            className="h-9 w-9 shrink-0 rounded-[var(--radius-sm)] object-cover"
+                          />
+                        ) : (
+                          <span className="food-gradient-dish h-9 w-9 shrink-0 rounded-[var(--radius-sm)]" />
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-[var(--color-text-primary)]">
+                            {food.name}
+                          </span>
+                          {food.region && (
+                            <span className="block truncate text-xs text-[var(--color-text-muted)]">
+                              {food.region}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
+
             <button
               type="button"
               onClick={findNearMe}
@@ -140,14 +293,35 @@ export function FoodsExplorer({ foods, regions, activeRegion }: FoodsExplorerPro
 
           {/* Region filter pills */}
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <RegionPill href="/foods" label="All Regions" active={activeRegion === null} />
+            <FilterPill
+              href={buildFoodsHref(null, activeCuisine)}
+              label="All Regions"
+              active={activeRegion === null}
+            />
             {regions.map((region) => (
-              <RegionPill
+              <FilterPill
                 key={region}
-                href={`/foods?region=${encodeURIComponent(region)}`}
+                href={buildFoodsHref(region, activeCuisine)}
                 label={region}
                 dot={REGION_DOT[region]}
                 active={activeRegion?.toLowerCase() === region.toLowerCase()}
+              />
+            ))}
+          </div>
+
+          {/* Cuisine filter pills */}
+          <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <FilterPill
+              href={buildFoodsHref(activeRegion, null)}
+              label="All Cuisines"
+              active={activeCuisine === null}
+            />
+            {cuisines.map((cuisine) => (
+              <FilterPill
+                key={cuisine}
+                href={buildFoodsHref(activeRegion, cuisine)}
+                label={cuisine}
+                active={activeCuisine?.toLowerCase() === cuisine.toLowerCase()}
               />
             ))}
           </div>
@@ -160,7 +334,8 @@ export function FoodsExplorer({ foods, regions, activeRegion }: FoodsExplorerPro
           <p className="text-sm text-[var(--color-text-muted)]">
             <strong className="text-[var(--color-text-primary)]">{filtered.length}</strong>{" "}
             {filtered.length === 1 ? "dish" : "dishes"} found
-            {activeRegion ? ` in ${activeRegion}` : ""}
+            {activeCuisine ? ` · ${activeCuisine}` : ""}
+            {activeRegion ? ` · ${activeRegion}` : ""}
           </p>
           <label className="inline-flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
             <SlidersHorizontal size={14} className="hidden sm:block" />
@@ -184,38 +359,65 @@ export function FoodsExplorer({ foods, regions, activeRegion }: FoodsExplorerPro
               No dishes found
             </p>
             <p className="max-w-sm text-sm text-[var(--color-text-muted)]">
-              Try a different search{activeRegion ? " or explore another region" : ""}.
+              {query
+                ? `No dishes match “${query.trim()}”.`
+                : "No dishes match these filters."}{" "}
+              {hasFilter ? "Try clearing a filter" : "Try a different search"}.
             </p>
+            {hasFilter && (
+              <Link
+                href={"/foods" as Route}
+                className="mt-1 rounded-full bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)]"
+              >
+                Clear all filters
+              </Link>
+            )}
           </div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-5 lg:grid-cols-4">
-              {shown.map((food) => (
-                <Link
-                  key={food.id}
-                  href={`/foods/${food.slug}`}
-                  aria-label={food.name}
-                  className="group block overflow-hidden rounded-[var(--radius-md)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
-                >
-                  {food.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={food.image_url}
-                      alt={food.name}
-                      loading="lazy"
-                      className="aspect-square w-full object-cover transition duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="food-gradient-dish aspect-square w-full" />
-                  )}
-                  <div className="p-3 sm:p-3.5">
-                    <p className="font-semibold text-[var(--color-text-primary)]">{food.name}</p>
-                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--color-text-muted)]">
-                      {food.description ?? "Traditional and modern African flavors."}
-                    </p>
-                  </div>
-                </Link>
-              ))}
+              {shown.map((food) => {
+                const times = formatTimes(food.prep_minutes, food.cook_minutes);
+                return (
+                  <Link
+                    key={food.id}
+                    href={`/foods/${food.slug}` as Route}
+                    aria-label={food.name}
+                    className="group block overflow-hidden rounded-[var(--radius-md)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
+                  >
+                    <div className="relative">
+                      {food.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={food.image_url}
+                          alt={food.name}
+                          loading="lazy"
+                          className="aspect-square w-full object-cover transition duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="food-gradient-dish aspect-square w-full" />
+                      )}
+                      {food.region && (
+                        <span className="absolute left-2 top-2 rounded-full bg-[var(--color-dark)]/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+                          {food.region}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-3 sm:p-3.5">
+                      <p className="font-semibold text-[var(--color-text-primary)]">{food.name}</p>
+                      {times && (
+                        <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)]">
+                          <Clock size={13} className="shrink-0" />
+                          {times}
+                        </p>
+                      )}
+                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--color-text-muted)]">
+                        {food.description ?? "Traditional and modern African flavors."}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
 
             {/* Infinite-scroll sentinel */}
@@ -234,22 +436,22 @@ export function FoodsExplorer({ foods, regions, activeRegion }: FoodsExplorerPro
   );
 }
 
-// ── Region pill ──────────────────────────────────────────────
+// ── Filter pill (region + cuisine) ───────────────────────────────────────────
 
-function RegionPill({
+function FilterPill({
   href,
   label,
   dot,
   active
 }: {
-  href: string;
+  href: Route;
   label: string;
   dot?: string;
   active: boolean;
 }) {
   return (
     <Link
-      href={href as Route}
+      href={href}
       className={cn(
         "inline-flex shrink-0 items-center gap-2 rounded-full border-[1.5px] px-4 py-2 text-sm font-bold transition",
         active

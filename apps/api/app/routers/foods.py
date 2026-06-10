@@ -16,6 +16,10 @@ FOOD_EXAMPLE = {
     "slug": "jollof-rice",
     "description": "Smoky tomato-based rice dish popular across West Africa.",
     "image_url": "https://images.example.com/jollof-rice.jpg",
+    "region": "West African",
+    "cuisines": ["Ghanaian", "Nigerian"],
+    "prep_minutes": 20,
+    "cook_minutes": 45,
     "created_at": "2026-04-12T00:00:00Z",
 }
 
@@ -44,13 +48,14 @@ FOOD_DETAIL_EXAMPLE = {
 )
 async def list_foods_route(
     region: str | None = Query(default=None),
+    cuisine: str | None = Query(default=None),
     has_vendors: bool | None = Query(default=None),
 ) -> list[FoodOut]:
-    """List foods with an optional region filter and optional vendor-listed filter."""
+    """List foods with optional region, cuisine, and vendor-listed filters."""
 
     return [
         FoodOut.model_validate(row)
-        for row in await list_foods(region=region, has_vendors=has_vendors)
+        for row in await list_foods(region=region, cuisine=cuisine, has_vendors=has_vendors)
     ]
 
 

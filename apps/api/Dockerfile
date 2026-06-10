@@ -12,4 +12,7 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# On boot: apply migrations (blocking — schema must be correct), then upsert the
+# food/ingredient/cuisine catalog (best-effort, idempotent — powers the browse &
+# cuisine/region filters), then start the server.
+CMD ["sh", "-c", "alembic upgrade head && (python -m seeds.seed_catalog || echo 'catalog seed skipped') && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

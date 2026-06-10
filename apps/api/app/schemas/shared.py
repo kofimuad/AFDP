@@ -12,6 +12,10 @@ class FoodSummary(BaseModel):
     slug: str
     description: str | None = None
     image_url: str | None = None
+    region: str | None = None
+    cuisines: list[str] = Field(default_factory=list)
+    prep_minutes: int | None = None
+    cook_minutes: int | None = None
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

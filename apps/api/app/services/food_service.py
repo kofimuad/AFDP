@@ -19,15 +19,39 @@ def _row_to_food_summary(row: dict[str, Any]) -> dict[str, Any]:
         "slug": row["slug"],
         "description": row.get("description"),
         "image_url": row.get("image_url"),
+        "region": row.get("region"),
+        "cuisines": list(row.get("cuisines") or []),
+        "prep_minutes": row.get("prep_minutes"),
+        "cook_minutes": row.get("cook_minutes"),
         "created_at": row.get("created_at"),
     }
 
 
+# Correlated subqueries reused by list + detail queries to attach the food's
+# primary region name and the full list of cuisine names.
+_FOOD_REGION_SELECT = """(
+    SELECT r.name
+    FROM food_regions fr
+    JOIN regions r ON r.id = fr.region_id
+    WHERE fr.food_id = f.id
+    ORDER BY r.name
+    LIMIT 1
+) AS region"""
+
+_FOOD_CUISINES_SELECT = """COALESCE((
+    SELECT array_agg(c.name ORDER BY c.name)
+    FROM food_cuisines fc
+    JOIN cuisines c ON c.id = fc.cuisine_id
+    WHERE fc.food_id = f.id
+), ARRAY[]::text[]) AS cuisines"""
+
+
 async def list_foods(
     region: str | None = None,
+    cuisine: str | None = None,
     has_vendors: bool | None = None,
 ) -> list[dict[str, Any]]:
-    """Return all foods, optionally restricted to a named region or to those with vendor listings."""
+    """Return foods, optionally restricted by region, cuisine, or vendor listings."""
 
     params: list[Any] = []
     where_clauses: list[str] = []
@@ -43,6 +67,17 @@ async def list_foods(
             )"""
         )
 
+    if cuisine:
+        cuisine_placeholder = bind_param(params, cuisine)
+        where_clauses.append(
+            f"""EXISTS (
+                SELECT 1
+                FROM food_cuisines fc
+                JOIN cuisines c ON c.id = fc.cuisine_id
+                WHERE fc.food_id = f.id AND c.name ILIKE {cuisine_placeholder}
+            )"""
+        )
+
     if has_vendors:
         where_clauses.append(
             "EXISTS (SELECT 1 FROM vendor_items vi WHERE vi.food_id = f.id)"
@@ -50,7 +85,11 @@ async def list_foods(
 
     where_sql = " AND ".join(where_clauses) if where_clauses else "TRUE"
     sql = f"""
-        SELECT f.id, f.name, f.slug, f.description, f.image_url, f.created_at
+        SELECT
+            f.id, f.name, f.slug, f.description, f.image_url,
+            f.prep_minutes, f.cook_minutes, f.created_at,
+            {_FOOD_REGION_SELECT},
+            {_FOOD_CUISINES_SELECT}
         FROM foods f
         WHERE {where_sql}
         ORDER BY f.name ASC;
@@ -66,10 +105,14 @@ async def get_food_detail(slug: str, lat: float | None = None, lng: float | None
         raise HTTPException(status_code=422, detail="lat and lng must be provided together")
 
     food = await fetchrow(
-        """
-        SELECT id, name, slug, description, image_url, created_at
-        FROM foods
-        WHERE slug = $1;
+        f"""
+        SELECT
+            f.id, f.name, f.slug, f.description, f.image_url,
+            f.prep_minutes, f.cook_minutes, f.created_at,
+            {_FOOD_REGION_SELECT},
+            {_FOOD_CUISINES_SELECT}
+        FROM foods f
+        WHERE f.slug = $1;
         """,
         slug,
     )

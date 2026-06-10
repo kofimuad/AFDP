@@ -6,6 +6,10 @@ export interface FoodSummary {
   slug: string;
   description: string | null;
   image_url: string | null;
+  region: string | null;
+  cuisines: string[];
+  prep_minutes: number | null;
+  cook_minutes: number | null;
   created_at: string | null;
 }
 
