@@ -302,9 +302,14 @@ export async function getVendor(slug: string, lat?: number, lng?: number): Promi
   return data;
 }
 
-export async function getFoods(params?: { region?: string; hasVendors?: boolean }): Promise<FoodSummary[]> {
+export async function getFoods(params?: {
+  region?: string;
+  cuisine?: string;
+  hasVendors?: boolean;
+}): Promise<FoodSummary[]> {
   const query: Record<string, string | boolean> = {};
   if (params?.region) query.region = params.region;
+  if (params?.cuisine) query.cuisine = params.cuisine;
   if (params?.hasVendors) query.has_vendors = true;
   const { data } = await api.get<FoodSummary[]>("/foods", { params: query });
   return data;

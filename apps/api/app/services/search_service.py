@@ -25,14 +25,30 @@ async def find_best_food_match(q: str) -> dict[str, Any] | None:
     """Find the closest food match by case-insensitive fuzzy name search."""
 
     sql = """
-        SELECT id, name, slug, description, image_url, created_at
-        FROM foods
-        WHERE name ILIKE $1
-        ORDER BY CASE WHEN lower(name) = lower($2) THEN 0 ELSE 1 END, name
+        SELECT
+            f.id, f.name, f.slug, f.description, f.image_url,
+            f.prep_minutes, f.cook_minutes, f.created_at,
+            (
+                SELECT r.name FROM food_regions fr
+                JOIN regions r ON r.id = fr.region_id
+                WHERE fr.food_id = f.id ORDER BY r.name LIMIT 1
+            ) AS region,
+            COALESCE((
+                SELECT array_agg(c.name ORDER BY c.name) FROM food_cuisines fc
+                JOIN cuisines c ON c.id = fc.cuisine_id
+                WHERE fc.food_id = f.id
+            ), ARRAY[]::text[]) AS cuisines
+        FROM foods f
+        WHERE f.name ILIKE $1
+        ORDER BY CASE WHEN lower(f.name) = lower($2) THEN 0 ELSE 1 END, f.name
         LIMIT 1;
     """
     row = await fetchrow(sql, f"%{q}%", q)
-    return dict(row) if row else None
+    if not row:
+        return None
+    data = dict(row)
+    data["cuisines"] = list(data.get("cuisines") or [])
+    return data
 
 
 async def find_ingredients_for_food(food_id: str) -> list[dict[str, Any]]:

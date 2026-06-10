@@ -51,81 +51,83 @@ REGIONS: list[str] = [
 ]
 
 # ── Foods ──────────────────────────────────────────────────────────────────
+# ``prep_minutes``/``cook_minutes`` are curated approximations for the
+# "Cook it yourself" catalog cards — hands-on prep vs. active cook/bake time.
 FOODS: list[dict] = [
     # West African
-    {"name": "Jollof Rice", "region": "West African", "description": "Smoky one-pot tomato rice, a West African staple."},
-    {"name": "Egusi Soup", "region": "West African", "description": "Melon-seed soup with leafy greens and protein."},
-    {"name": "Suya", "region": "West African", "description": "Spicy grilled beef skewers coated in yaji spice."},
-    {"name": "Fufu", "region": "West African", "description": "Soft pounded dough eaten with soup."},
-    {"name": "Pounded Yam", "region": "West African", "description": "Smooth yam swallow paired with Nigerian soups."},
-    {"name": "Banga Soup", "region": "West African", "description": "Palm-nut soup from the Niger Delta."},
-    {"name": "Afang Soup", "region": "West African", "description": "Efik soup of afang leaves and waterleaf."},
-    {"name": "Edikang Ikong", "region": "West African", "description": "Vegetable soup with ugu and waterleaf."},
-    {"name": "Ogbono Soup", "region": "West African", "description": "Draw soup from ground ogbono seeds."},
-    {"name": "Moi Moi", "region": "West African", "description": "Steamed bean pudding."},
-    {"name": "Akara", "region": "West African", "description": "Fried bean cakes."},
-    {"name": "Pepper Soup", "region": "West African", "description": "Peppery broth with fish, goat, or chicken."},
-    {"name": "Efo Riro", "region": "West African", "description": "Yoruba spinach stew."},
-    {"name": "Amala and Ewedu", "region": "West African", "description": "Yam-flour swallow with jute-leaf soup."},
-    {"name": "Waakye", "region": "West African", "description": "Ghanaian rice and beans with shito."},
-    {"name": "Kelewele", "region": "West African", "description": "Spiced fried plantains."},
-    {"name": "Banku and Tilapia", "region": "West African", "description": "Fermented corn-cassava dough with grilled tilapia."},
-    {"name": "Fufu and Light Soup", "region": "West African", "description": "Cassava fufu in a tomato-ginger broth."},
-    {"name": "Okra Soup", "region": "West African", "description": "Okra-based draw soup."},
-    {"name": "Groundnut Soup", "region": "West African", "description": "Peanut-based stew (Nkatenkwan)."},
-    {"name": "Thieboudienne", "region": "West African", "description": "Senegalese jollof-style fish and rice."},
-    {"name": "Yassa Poulet", "region": "West African", "description": "Senegalese lemon-onion chicken."},
-    {"name": "Mafe", "region": "West African", "description": "Peanut stew popular across West Africa."},
-    {"name": "Attieke", "region": "West African", "description": "Ivorian cassava couscous."},
-    {"name": "Kedjenou", "region": "West African", "description": "Slow-cooked Ivorian chicken stew."},
-    {"name": "Riz Gras", "region": "West African", "description": "Burkinabé festive rice."},
-    {"name": "Chin Chin", "region": "West African", "description": "Crunchy sweet fried dough snack."},
-    {"name": "Plantain Chips", "region": "West African", "description": "Crisp fried slices of green plantain."},
+    {"name": "Jollof Rice", "region": "West African", "prep_minutes": 20, "cook_minutes": 45, "description": "Smoky one-pot tomato rice, a West African staple."},
+    {"name": "Egusi Soup", "region": "West African", "prep_minutes": 25, "cook_minutes": 50, "description": "Melon-seed soup with leafy greens and protein."},
+    {"name": "Suya", "region": "West African", "prep_minutes": 25, "cook_minutes": 15, "description": "Spicy grilled beef skewers coated in yaji spice."},
+    {"name": "Fufu", "region": "West African", "prep_minutes": 10, "cook_minutes": 20, "description": "Soft pounded dough eaten with soup."},
+    {"name": "Pounded Yam", "region": "West African", "prep_minutes": 15, "cook_minutes": 30, "description": "Smooth yam swallow paired with Nigerian soups."},
+    {"name": "Banga Soup", "region": "West African", "prep_minutes": 20, "cook_minutes": 55, "description": "Palm-nut soup from the Niger Delta."},
+    {"name": "Afang Soup", "region": "West African", "prep_minutes": 25, "cook_minutes": 45, "description": "Efik soup of afang leaves and waterleaf."},
+    {"name": "Edikang Ikong", "region": "West African", "prep_minutes": 25, "cook_minutes": 45, "description": "Vegetable soup with ugu and waterleaf."},
+    {"name": "Ogbono Soup", "region": "West African", "prep_minutes": 15, "cook_minutes": 40, "description": "Draw soup from ground ogbono seeds."},
+    {"name": "Moi Moi", "region": "West African", "prep_minutes": 25, "cook_minutes": 45, "description": "Steamed bean pudding."},
+    {"name": "Akara", "region": "West African", "prep_minutes": 20, "cook_minutes": 20, "description": "Fried bean cakes."},
+    {"name": "Pepper Soup", "region": "West African", "prep_minutes": 15, "cook_minutes": 35, "description": "Peppery broth with fish, goat, or chicken."},
+    {"name": "Efo Riro", "region": "West African", "prep_minutes": 20, "cook_minutes": 40, "description": "Yoruba spinach stew."},
+    {"name": "Amala and Ewedu", "region": "West African", "prep_minutes": 15, "cook_minutes": 25, "description": "Yam-flour swallow with jute-leaf soup."},
+    {"name": "Waakye", "region": "West African", "prep_minutes": 15, "cook_minutes": 60, "description": "Ghanaian rice and beans with shito."},
+    {"name": "Kelewele", "region": "West African", "prep_minutes": 15, "cook_minutes": 15, "description": "Spiced fried plantains."},
+    {"name": "Banku and Tilapia", "region": "West African", "prep_minutes": 20, "cook_minutes": 40, "description": "Fermented corn-cassava dough with grilled tilapia."},
+    {"name": "Fufu and Light Soup", "region": "West African", "prep_minutes": 20, "cook_minutes": 50, "description": "Cassava fufu in a tomato-ginger broth."},
+    {"name": "Okra Soup", "region": "West African", "prep_minutes": 15, "cook_minutes": 30, "description": "Okra-based draw soup."},
+    {"name": "Groundnut Soup", "region": "West African", "prep_minutes": 20, "cook_minutes": 55, "description": "Peanut-based stew (Nkatenkwan)."},
+    {"name": "Thieboudienne", "region": "West African", "prep_minutes": 30, "cook_minutes": 70, "description": "Senegalese jollof-style fish and rice."},
+    {"name": "Yassa Poulet", "region": "West African", "prep_minutes": 20, "cook_minutes": 45, "description": "Senegalese lemon-onion chicken."},
+    {"name": "Mafe", "region": "West African", "prep_minutes": 20, "cook_minutes": 60, "description": "Peanut stew popular across West Africa."},
+    {"name": "Attieke", "region": "West African", "prep_minutes": 10, "cook_minutes": 20, "description": "Ivorian cassava couscous."},
+    {"name": "Kedjenou", "region": "West African", "prep_minutes": 20, "cook_minutes": 60, "description": "Slow-cooked Ivorian chicken stew."},
+    {"name": "Riz Gras", "region": "West African", "prep_minutes": 25, "cook_minutes": 55, "description": "Burkinabé festive rice."},
+    {"name": "Chin Chin", "region": "West African", "prep_minutes": 25, "cook_minutes": 25, "description": "Crunchy sweet fried dough snack."},
+    {"name": "Plantain Chips", "region": "West African", "prep_minutes": 10, "cook_minutes": 15, "description": "Crisp fried slices of green plantain."},
 
     # East African
-    {"name": "Injera", "region": "East African", "description": "Spongy teff sourdough flatbread, the base of Ethiopian and Eritrean meals."},
-    {"name": "Doro Wat", "region": "East African", "description": "Deeply spiced Ethiopian chicken stew with berbere and niter kibbeh."},
-    {"name": "Injera with Doro Wat", "region": "East African", "description": "Sourdough flatbread with spiced chicken stew."},
-    {"name": "Injera with Tibs", "region": "East African", "description": "Sauteed beef or lamb served over injera."},
-    {"name": "Injera with Kitfo", "region": "East African", "description": "Minced raw beef with mitmita and niter kibbeh."},
-    {"name": "Misir Wat", "region": "East African", "description": "Spiced red lentil stew."},
-    {"name": "Shiro", "region": "East African", "description": "Thick chickpea-flour stew."},
-    {"name": "Ugali", "region": "East African", "description": "Stiff maize porridge."},
-    {"name": "Nyama Choma", "region": "East African", "description": "Kenyan grilled goat or beef."},
-    {"name": "Pilau", "region": "East African", "description": "Swahili spiced rice."},
-    {"name": "Chapati", "region": "East African", "description": "East African layered flatbread."},
-    {"name": "Mandazi", "region": "East African", "description": "Cardamom-scented fried bread."},
-    {"name": "Sukuma Wiki", "region": "East African", "description": "Sauteed collard greens."},
-    {"name": "Githeri", "region": "East African", "description": "Kenyan corn-and-bean stew."},
-    {"name": "Matoke", "region": "East African", "description": "Ugandan stewed plantains."},
-    {"name": "Luwombo", "region": "East African", "description": "Ganda stew steamed in banana leaves."},
+    {"name": "Injera", "region": "East African", "prep_minutes": 30, "cook_minutes": 20, "description": "Spongy teff sourdough flatbread, the base of Ethiopian and Eritrean meals."},
+    {"name": "Doro Wat", "region": "East African", "prep_minutes": 30, "cook_minutes": 90, "description": "Deeply spiced Ethiopian chicken stew with berbere and niter kibbeh."},
+    {"name": "Injera with Doro Wat", "region": "East African", "prep_minutes": 40, "cook_minutes": 90, "description": "Sourdough flatbread with spiced chicken stew."},
+    {"name": "Injera with Tibs", "region": "East African", "prep_minutes": 25, "cook_minutes": 25, "description": "Sauteed beef or lamb served over injera."},
+    {"name": "Injera with Kitfo", "region": "East African", "prep_minutes": 20, "cook_minutes": 10, "description": "Minced raw beef with mitmita and niter kibbeh."},
+    {"name": "Misir Wat", "region": "East African", "prep_minutes": 15, "cook_minutes": 40, "description": "Spiced red lentil stew."},
+    {"name": "Shiro", "region": "East African", "prep_minutes": 10, "cook_minutes": 25, "description": "Thick chickpea-flour stew."},
+    {"name": "Ugali", "region": "East African", "prep_minutes": 5, "cook_minutes": 15, "description": "Stiff maize porridge."},
+    {"name": "Nyama Choma", "region": "East African", "prep_minutes": 15, "cook_minutes": 40, "description": "Kenyan grilled goat or beef."},
+    {"name": "Pilau", "region": "East African", "prep_minutes": 20, "cook_minutes": 45, "description": "Swahili spiced rice."},
+    {"name": "Chapati", "region": "East African", "prep_minutes": 25, "cook_minutes": 25, "description": "East African layered flatbread."},
+    {"name": "Mandazi", "region": "East African", "prep_minutes": 20, "cook_minutes": 20, "description": "Cardamom-scented fried bread."},
+    {"name": "Sukuma Wiki", "region": "East African", "prep_minutes": 10, "cook_minutes": 15, "description": "Sauteed collard greens."},
+    {"name": "Githeri", "region": "East African", "prep_minutes": 15, "cook_minutes": 50, "description": "Kenyan corn-and-bean stew."},
+    {"name": "Matoke", "region": "East African", "prep_minutes": 20, "cook_minutes": 40, "description": "Ugandan stewed plantains."},
+    {"name": "Luwombo", "region": "East African", "prep_minutes": 30, "cook_minutes": 75, "description": "Ganda stew steamed in banana leaves."},
 
     # North African
-    {"name": "Couscous", "region": "North African", "description": "Steamed semolina with vegetables and meat."},
-    {"name": "Lamb Tagine", "region": "North African", "description": "Slow-cooked lamb with preserved lemon and olives."},
-    {"name": "Chicken Tagine", "region": "North African", "description": "Chicken stewed in a conical clay pot."},
-    {"name": "Harira", "region": "North African", "description": "Moroccan tomato-lentil soup."},
-    {"name": "Shakshuka", "region": "North African", "description": "Eggs poached in spiced tomato sauce."},
-    {"name": "Msemen", "region": "North African", "description": "Layered square pancakes."},
-    {"name": "Brik", "region": "North African", "description": "Tunisian fried pastry with egg."},
-    {"name": "Mechoui", "region": "North African", "description": "Slow-roasted whole lamb."},
+    {"name": "Couscous", "region": "North African", "prep_minutes": 25, "cook_minutes": 60, "description": "Steamed semolina with vegetables and meat."},
+    {"name": "Lamb Tagine", "region": "North African", "prep_minutes": 25, "cook_minutes": 120, "description": "Slow-cooked lamb with preserved lemon and olives."},
+    {"name": "Chicken Tagine", "region": "North African", "prep_minutes": 20, "cook_minutes": 75, "description": "Chicken stewed in a conical clay pot."},
+    {"name": "Harira", "region": "North African", "prep_minutes": 20, "cook_minutes": 60, "description": "Moroccan tomato-lentil soup."},
+    {"name": "Shakshuka", "region": "North African", "prep_minutes": 10, "cook_minutes": 25, "description": "Eggs poached in spiced tomato sauce."},
+    {"name": "Msemen", "region": "North African", "prep_minutes": 30, "cook_minutes": 20, "description": "Layered square pancakes."},
+    {"name": "Brik", "region": "North African", "prep_minutes": 15, "cook_minutes": 10, "description": "Tunisian fried pastry with egg."},
+    {"name": "Mechoui", "region": "North African", "prep_minutes": 20, "cook_minutes": 180, "description": "Slow-roasted whole lamb."},
 
     # Southern African
-    {"name": "Bobotie", "region": "Southern African", "description": "Spiced minced meat baked with an egg topping."},
-    {"name": "Bunny Chow", "region": "Southern African", "description": "Hollowed bread loaf filled with curry."},
-    {"name": "Chakalaka", "region": "Southern African", "description": "Spicy vegetable relish."},
-    {"name": "Pap and Wors", "region": "Southern African", "description": "Maize porridge with boerewors sausage."},
-    {"name": "Biltong", "region": "Southern African", "description": "Air-dried cured beef."},
-    {"name": "Sadza", "region": "Southern African", "description": "Zimbabwean stiff maize-meal porridge eaten with relishes."},
+    {"name": "Bobotie", "region": "Southern African", "prep_minutes": 25, "cook_minutes": 50, "description": "Spiced minced meat baked with an egg topping."},
+    {"name": "Bunny Chow", "region": "Southern African", "prep_minutes": 20, "cook_minutes": 60, "description": "Hollowed bread loaf filled with curry."},
+    {"name": "Chakalaka", "region": "Southern African", "prep_minutes": 15, "cook_minutes": 25, "description": "Spicy vegetable relish."},
+    {"name": "Pap and Wors", "region": "Southern African", "prep_minutes": 10, "cook_minutes": 35, "description": "Maize porridge with boerewors sausage."},
+    {"name": "Biltong", "region": "Southern African", "prep_minutes": 30, "cook_minutes": 0, "description": "Air-dried cured beef."},
+    {"name": "Sadza", "region": "Southern African", "prep_minutes": 5, "cook_minutes": 20, "description": "Zimbabwean stiff maize-meal porridge eaten with relishes."},
 
     # Central African
-    {"name": "Saka-Saka", "region": "Central African", "description": "Pounded cassava leaves in palm oil."},
-    {"name": "Poulet Moambe", "region": "Central African", "description": "Chicken in palm-nut sauce."},
-    {"name": "Chikwangue", "region": "Central African", "description": "Fermented cassava dough."},
-    {"name": "Ndole", "region": "Central African", "description": "Cameroonian bitter-leaf stew with groundnut and meat or shrimp."},
+    {"name": "Saka-Saka", "region": "Central African", "prep_minutes": 20, "cook_minutes": 60, "description": "Pounded cassava leaves in palm oil."},
+    {"name": "Poulet Moambe", "region": "Central African", "prep_minutes": 20, "cook_minutes": 55, "description": "Chicken in palm-nut sauce."},
+    {"name": "Chikwangue", "region": "Central African", "prep_minutes": 20, "cook_minutes": 60, "description": "Fermented cassava dough."},
+    {"name": "Ndole", "region": "Central African", "prep_minutes": 30, "cook_minutes": 60, "description": "Cameroonian bitter-leaf stew with groundnut and meat or shrimp."},
 
     # Afro-Caribbean
-    {"name": "Jerk Chicken", "region": "Afro-Caribbean", "description": "Jamaican grilled chicken marinated in allspice and scotch bonnet."},
+    {"name": "Jerk Chicken", "region": "Afro-Caribbean", "prep_minutes": 20, "cook_minutes": 40, "description": "Jamaican grilled chicken marinated in allspice and scotch bonnet."},
 ]
 
 # ── Ingredients ────────────────────────────────────────────────────────────
@@ -737,6 +739,44 @@ CUISINE_FOODS: dict[str, list[str]] = {
     "east_african": _EAST_AFRICAN,
     "african": _ALL,
 }
+
+# ── Country-level cuisines (for the "Cook it yourself" cuisine filter) ──────
+# Display names for the country-level cuisine keys above. The aggregate keys
+# (``west_african``/``east_african``/``african``) and the pure region-aliases
+# (e.g. ``sierra_leonean`` reuses the whole West-African set) are intentionally
+# excluded so cuisine pills map to distinct dish sets and don't over-tag.
+_CUISINE_DISPLAY: dict[str, str] = {
+    "nigerian": "Nigerian",
+    "ghanaian": "Ghanaian",
+    "senegalese": "Senegalese",
+    "ivorian": "Ivorian",
+    "cameroonian": "Cameroonian",
+    "ethiopian": "Ethiopian",
+    "eritrean": "Eritrean",
+    "somali": "Somali",
+    "kenyan": "Kenyan",
+    "ugandan": "Ugandan",
+    "moroccan": "Moroccan",
+    "tunisian": "Tunisian",
+    "algerian": "Algerian",
+    "south_african": "South African",
+    "congolese": "Congolese",
+}
+
+# Ordered, de-duplicated list of cuisine display names for filter UIs.
+CUISINES: list[str] = list(_CUISINE_DISPLAY.values())
+
+# Food name -> sorted list of cuisine display names, derived by inverting
+# CUISINE_FOODS over the curated whitelist (reuses existing data, no duplication).
+FOOD_CUISINES: dict[str, list[str]] = {}
+for _key, _display in _CUISINE_DISPLAY.items():
+    for _food_name in CUISINE_FOODS.get(_key, []):
+        FOOD_CUISINES.setdefault(_food_name, [])
+        if _display not in FOOD_CUISINES[_food_name]:
+            FOOD_CUISINES[_food_name].append(_display)
+for _food_name in FOOD_CUISINES:
+    FOOD_CUISINES[_food_name].sort()
+
 
 # For grocery vendors we mostly just pick a general African pantry selection,
 # but we sort it by cuisine so e.g. an Ethiopian grocery leans Ethiopian.
