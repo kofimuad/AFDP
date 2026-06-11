@@ -1,0 +1,15 @@
+# Flutter / Dart generated artifacts — do not commit
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Lock file (kept untracked while mobile stack is being migrated to React Native + Expo)
+pubspec.lock
+
+# IDE / tooling
+.flutter-versions
+*.iml
