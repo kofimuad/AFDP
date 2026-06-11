@@ -18,18 +18,30 @@ FOODS = [
         "name": "Jollof Rice",
         "description": "Smoky tomato-based rice dish popular across West Africa.",
         "image_url": "https://images.example.com/jollof-rice.jpg",
+        "prep_minutes": 20,
+        "cook_minutes": 45,
+        "cuisines": ["Ghanaian", "Nigerian"],
     },
     {
         "name": "Egusi Soup",
         "description": "Melon seed soup with leafy greens and protein.",
         "image_url": "https://images.example.com/egusi-soup.jpg",
+        "prep_minutes": 25,
+        "cook_minutes": 50,
+        "cuisines": ["Cameroonian", "Nigerian"],
     },
     {
         "name": "Injera with Doro Wat",
         "description": "Ethiopian sour flatbread served with spiced chicken stew.",
         "image_url": "https://images.example.com/injera-doro-wat.jpg",
+        "prep_minutes": 40,
+        "cook_minutes": 90,
+        "cuisines": ["Eritrean", "Ethiopian"],
     },
 ]
+
+# Cuisine display names referenced by FOODS above (seeded into the cuisines table).
+CUISINES = ["Ghanaian", "Nigerian", "Cameroonian", "Eritrean", "Ethiopian"]
 
 INGREDIENTS = [
     "Long grain rice",
@@ -94,22 +106,40 @@ async def seed() -> None:
             """
         )
 
+        cuisine_ids: dict[str, str] = {}
+        for cuisine_name in CUISINES:
+            cuisine_id = await conn.fetchval(
+                """
+                INSERT INTO cuisines (id, name, slug)
+                VALUES (gen_random_uuid(), $1, $2)
+                ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+                RETURNING id;
+                """,
+                cuisine_name,
+                slugify(cuisine_name),
+            )
+            cuisine_ids[cuisine_name] = str(cuisine_id)
+
         food_ids: dict[str, str] = {}
         for food in FOODS:
             food_id = await conn.fetchval(
                 """
-                INSERT INTO foods (id, name, slug, description, image_url)
-                VALUES (gen_random_uuid(), $1, $2, $3, $4)
+                INSERT INTO foods (id, name, slug, description, image_url, prep_minutes, cook_minutes)
+                VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)
                 ON CONFLICT (slug) DO UPDATE SET
                     name = EXCLUDED.name,
                     description = EXCLUDED.description,
-                    image_url = EXCLUDED.image_url
+                    image_url = EXCLUDED.image_url,
+                    prep_minutes = EXCLUDED.prep_minutes,
+                    cook_minutes = EXCLUDED.cook_minutes
                 RETURNING id;
                 """,
                 food["name"],
                 slugify(food["name"]),
                 food["description"],
                 food["image_url"],
+                food.get("prep_minutes"),
+                food.get("cook_minutes"),
             )
             food_ids[food["name"]] = str(food_id)
             await conn.execute(
@@ -121,6 +151,18 @@ async def seed() -> None:
                 food_id,
                 region_id,
             )
+            for cuisine_name in food.get("cuisines", []):
+                cid = cuisine_ids.get(cuisine_name)
+                if cid:
+                    await conn.execute(
+                        """
+                        INSERT INTO food_cuisines (food_id, cuisine_id)
+                        VALUES ($1, $2)
+                        ON CONFLICT DO NOTHING;
+                        """,
+                        food_id,
+                        cid,
+                    )
 
         ingredient_ids: dict[str, str] = {}
         for ingredient_name in INGREDIENTS:
