@@ -31,16 +31,18 @@ _ING_IMG_URL_TEMPLATE = (
 
 
 def food_image_url(name: str) -> str:
-    """Return the curated image for a dish, else its deterministic Cloudinary URL.
+    """Return a dish's image path.
 
-    The Cloudinary fallback (auto-fetched from Wikipedia) misfires for many
-    African dishes — wrong article or no lead image — so ``FOOD_IMAGE_OVERRIDES``
-    pins a verified Wikimedia Commons photo per dish. See that dict below.
+    Curated dishes ship a bundled photo at ``apps/web/public/foods/<slug>.jpg``
+    (served by the web app at ``/foods/<slug>.jpg``) — self-hosted so the app
+    never hotlinks Wikipedia/Commons at runtime. ``FOOD_IMAGE_OVERRIDES`` records
+    each image's Commons source for provenance / re-download. Dishes without a
+    bundled image fall back to the deterministic Cloudinary URL.
     """
-    override = FOOD_IMAGE_OVERRIDES.get(name)
-    if override:
-        return override
-    return _FOOD_IMG_URL_TEMPLATE.format(cloud=CLOUDINARY_CLOUD_NAME, slug=slugify(name))
+    slug = slugify(name)
+    if name in FOOD_IMAGE_OVERRIDES:
+        return f"/foods/{slug}.jpg"
+    return _FOOD_IMG_URL_TEMPLATE.format(cloud=CLOUDINARY_CLOUD_NAME, slug=slug)
 
 
 def ingredient_image_url(name: str) -> str:
@@ -938,7 +940,7 @@ FOOD_IMAGE_OVERRIDES: dict[str, str] = {
     "Shiro": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Enjera_be_shiro_wot.jpg/960px-Enjera_be_shiro_wot.jpg",
     "Ugali": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/A_plate_of_Ugali_with_fish_and_vegetables.jpg/960px-A_plate_of_Ugali_with_fish_and_vegetables.jpg",
     "Nyama Choma": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Jay_nyama_Choma.jpg/960px-Jay_nyama_Choma.jpg",
-    "Pilau": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Ile_Pilau_%285411130753%29.jpg/960px-Ile_Pilau_%285411130753%29.jpg",
+    "Pilau": "https://upload.wikimedia.org/wikipedia/commons/8/85/Pilau_Rice_%28Mixed_Spiced_Rice%29_%26_Beef.jpg",
     "Chapati": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/0118_Chapati_backen.jpg/960px-0118_Chapati_backen.jpg",
     "Mandazi": "https://upload.wikimedia.org/wikipedia/commons/6/69/Bowl_of_mandazi.jpg",
     "Sukuma Wiki": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/East_African_Vegetable_%28Sukuma_wiki%29.jpg/960px-East_African_Vegetable_%28Sukuma_wiki%29.jpg",
