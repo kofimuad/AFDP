@@ -31,7 +31,15 @@ _ING_IMG_URL_TEMPLATE = (
 
 
 def food_image_url(name: str) -> str:
-    """Build a deterministic Cloudinary URL for a given food name."""
+    """Return the curated image for a dish, else its deterministic Cloudinary URL.
+
+    The Cloudinary fallback (auto-fetched from Wikipedia) misfires for many
+    African dishes — wrong article or no lead image — so ``FOOD_IMAGE_OVERRIDES``
+    pins a verified Wikimedia Commons photo per dish. See that dict below.
+    """
+    override = FOOD_IMAGE_OVERRIDES.get(name)
+    if override:
+        return override
     return _FOOD_IMG_URL_TEMPLATE.format(cloud=CLOUDINARY_CLOUD_NAME, slug=slugify(name))
 
 
@@ -886,6 +894,76 @@ FOOD_RECIPE_LINKS: dict[str, list[dict]] = {
     "Jerk Chicken": [
         {"url": "https://www.youtube.com/watch?v=TAkloIC_DPQ", "source_type": "youtube", "title": "Authentic Jamaican Jerk Chicken - Racquels Caribbean Cuisine", "thumbnail_url": "https://i.ytimg.com/vi/TAkloIC_DPQ/hqdefault.jpg", "is_primary": True},
     ],
+}
+
+
+# ── Food → curated image (verified Wikimedia Commons photos) ───────────────
+# The Cloudinary auto-fetch (Wikipedia lead image) misfires for many African
+# dishes; these pin an accurate photo per dish. URLs verified 2026-06-15.
+FOOD_IMAGE_OVERRIDES: dict[str, str] = {
+    "Jollof Rice": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Jollof_%28Jollof-_Rice%29.jpg/960px-Jollof_%28Jollof-_Rice%29.jpg",
+    "Egusi Soup": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/EGUSI_SOUP.JPG/960px-EGUSI_SOUP.JPG",
+    "Suya": "https://upload.wikimedia.org/wikipedia/commons/9/92/Suya_%28827408387%29.jpg",
+    "Fufu": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Fufu_1.jpg/960px-Fufu_1.jpg",
+    "Pounded Yam": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/POUNDED_YAM_%26_VEGETABLE_SOUP._A_native_delicacy_of_the_Yoruba_tribe_in_Nigeria%2C_West_Africa..jpg/960px-POUNDED_YAM_%26_VEGETABLE_SOUP._A_native_delicacy_of_the_Yoruba_tribe_in_Nigeria%2C_West_Africa..jpg",
+    "Banga Soup": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Eba_served_with_Fresh_fish_banga_soup_in_a_clay_pot.jpg/960px-Eba_served_with_Fresh_fish_banga_soup_in_a_clay_pot.jpg",
+    "Afang Soup": "https://upload.wikimedia.org/wikipedia/commons/e/ea/Afang_Soup_%28okazi%29.jpg",
+    "Edikang Ikong": "https://upload.wikimedia.org/wikipedia/commons/0/07/Edikang_ikong.jpg",
+    "Ogbono Soup": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Eba_and_ogbono_soup.jpg",
+    "Moi Moi": "https://upload.wikimedia.org/wikipedia/commons/6/6a/Moi_moi_In_Northern_Nigeria_5.jpg",
+    "Akara": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/AKARA.jpg/960px-AKARA.jpg",
+    "Pepper Soup": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/Delicious_cooked_bushmeat_pepper_soup_ready_to_eat.jpg/960px-Delicious_cooked_bushmeat_pepper_soup_ready_to_eat.jpg",
+    "Efo Riro": "https://upload.wikimedia.org/wikipedia/commons/9/94/Efo-Riro_%287370530836%29_%28cropped%29.jpg",
+    "Amala and Ewedu": "https://upload.wikimedia.org/wikipedia/commons/8/86/Amala%2C_ewedu_and_assorted_meat.jpg",
+    "Waakye": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Waakye101.jpg/960px-Waakye101.jpg",
+    "Kelewele": "https://upload.wikimedia.org/wikipedia/commons/3/37/Kelewele.jpg",
+    "Banku and Tilapia": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/BANKU_WITH_TILAPIA_%2B_FRIED_RICE.jpg/960px-BANKU_WITH_TILAPIA_%2B_FRIED_RICE.jpg",
+    "Fufu and Light Soup": "https://upload.wikimedia.org/wikipedia/commons/d/d6/Fufu_and_light_soup_with_goat_meat.jpg",
+    "Okra Soup": "https://upload.wikimedia.org/wikipedia/commons/4/4e/Okra_Soup_In_Northern_Nigeria_11.jpg",
+    "Groundnut Soup": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Banku_and_groundnut_soup.jpg/960px-Banku_and_groundnut_soup.jpg",
+    "Thieboudienne": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Senegalese_Thieboudienne.JPG/960px-Senegalese_Thieboudienne.JPG",
+    "Yassa Poulet": "https://upload.wikimedia.org/wikipedia/commons/4/45/Poulet_Yassa_Chicken_rice_with_onion_sauce.jpg",
+    "Mafe": "https://upload.wikimedia.org/wikipedia/commons/f/ff/Mafe_SN.JPG",
+    "Attieke": "https://upload.wikimedia.org/wikipedia/commons/9/94/Attieke_and_chicken.jpg",
+    "Kedjenou": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Kedjenou.JPG/960px-Kedjenou.JPG",
+    "Riz Gras": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Du_riz_gras_%C3%A0_la_guineenne.JPG/960px-Du_riz_gras_%C3%A0_la_guineenne.JPG",
+    "Chin Chin": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/A_fried_chin_chin.jpg/960px-A_fried_chin_chin.jpg",
+    "Plantain Chips": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/PLANTAIN_CHIPS.jpg/960px-PLANTAIN_CHIPS.jpg",
+    "Injera": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Injera_1.jpg/960px-Injera_1.jpg",
+    "Doro Wat": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Ethiopian_wat.jpg/960px-Ethiopian_wat.jpg",
+    "Injera with Doro Wat": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Injera_and_doro_wat.jpg/960px-Injera_and_doro_wat.jpg",
+    "Injera with Tibs": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Mutton_tibs_and_injera.jpg/960px-Mutton_tibs_and_injera.jpg",
+    "Injera with Kitfo": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Kitfo%2C_Ayib_and_Injera.jpg/960px-Kitfo%2C_Ayib_and_Injera.jpg",
+    "Misir Wat": "https://upload.wikimedia.org/wikipedia/commons/a/a8/Misir_Wat_in_Pot.jpg",
+    "Shiro": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Enjera_be_shiro_wot.jpg/960px-Enjera_be_shiro_wot.jpg",
+    "Ugali": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/A_plate_of_Ugali_with_fish_and_vegetables.jpg/960px-A_plate_of_Ugali_with_fish_and_vegetables.jpg",
+    "Nyama Choma": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Jay_nyama_Choma.jpg/960px-Jay_nyama_Choma.jpg",
+    "Pilau": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Ile_Pilau_%285411130753%29.jpg/960px-Ile_Pilau_%285411130753%29.jpg",
+    "Chapati": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/0118_Chapati_backen.jpg/960px-0118_Chapati_backen.jpg",
+    "Mandazi": "https://upload.wikimedia.org/wikipedia/commons/6/69/Bowl_of_mandazi.jpg",
+    "Sukuma Wiki": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/East_African_Vegetable_%28Sukuma_wiki%29.jpg/960px-East_African_Vegetable_%28Sukuma_wiki%29.jpg",
+    "Githeri": "https://upload.wikimedia.org/wikipedia/commons/1/11/Githeri.jpg",
+    "Matoke": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Matoke_and_Chicken.jpg/960px-Matoke_and_Chicken.jpg",
+    "Luwombo": "https://upload.wikimedia.org/wikipedia/commons/f/fe/Beff_luwombo_after_preparation.jpg",
+    "Couscous": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Couscous_%2874111%29.jpg/960px-Couscous_%2874111%29.jpg",
+    "Lamb Tagine": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Tagine_d%27agneau.jpg/960px-Tagine_d%27agneau.jpg",
+    "Chicken Tagine": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Chicken_Veg_Tagine_Rabat_Nov25_A7CR_08908.jpg/960px-Chicken_Veg_Tagine_Rabat_Nov25_A7CR_08908.jpg",
+    "Harira": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Harira..JPG/960px-Harira..JPG",
+    "Shakshuka": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Breakfast_of_bread_and_shakshuka_at_Artjuna_cafe%2C_Goa.jpg/960px-Breakfast_of_bread_and_shakshuka_at_Artjuna_cafe%2C_Goa.jpg",
+    "Msemen": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Msemmem.jpg/960px-Msemmem.jpg",
+    "Brik": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Fried_brik.jpg/960px-Fried_brik.jpg",
+    "Mechoui": "https://upload.wikimedia.org/wikipedia/commons/0/0c/Mechoui-01.jpg",
+    "Bobotie": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Bitesized_morsel_of_bobotie.jpg/960px-Bitesized_morsel_of_bobotie.jpg",
+    "Bunny Chow": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Bunny_Chow_with_Lamb_%26_Potato_-_African_Chow_2023-07-27.jpg/960px-Bunny_Chow_with_Lamb_%26_Potato_-_African_Chow_2023-07-27.jpg",
+    "Chakalaka": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Chakalaka.jpg/960px-Chakalaka.jpg",
+    "Pap and Wors": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Pap_with_sheba%2C_wors_and_mutton_chop.jpg/960px-Pap_with_sheba%2C_wors_and_mutton_chop.jpg",
+    "Biltong": "https://upload.wikimedia.org/wikipedia/commons/a/a3/Beef_Biltong_%28Segwapa_sa_kgomo%29.jpg",
+    "Sadza": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Sadza_and_Sausage.jpg/960px-Sadza_and_Sausage.jpg",
+    "Saka-Saka": "https://upload.wikimedia.org/wikipedia/commons/0/05/Saka-saka_-_pounded_and_cooked_cassava_leaves.jpg",
+    "Poulet Moambe": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Poulet_%C3%A0_la_moambe.JPG/960px-Poulet_%C3%A0_la_moambe.JPG",
+    "Chikwangue": "https://upload.wikimedia.org/wikipedia/commons/0/07/Cassava_Bread_-_cassava_cooked_in_leaf_wrap_%28Kwanga%2C_Chikwangue%29.jpg",
+    "Ndole": "https://upload.wikimedia.org/wikipedia/commons/b/b0/Boules_de_ndole.jpg",
+    "Jerk Chicken": "https://upload.wikimedia.org/wikipedia/commons/4/4f/BBQJerk_Chicken.jpg",
 }
 
 
