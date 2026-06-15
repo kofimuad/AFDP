@@ -16,15 +16,19 @@
   --color-dark:          #0F0E0D;
   --color-dark-secondary:#2A2622;
 
-  /* ── Primary — warm amber/orange ── */
-  --color-primary:       #E07020;
-  --color-primary-hover: #C05E18;
-  --color-primary-light: #FEF3E8;
+  /* ── Primary — Chili Coral (bright red-orange) ── */
+  --color-primary:       #F23B2F;
+  --color-primary-hover: #D12B1F;
+  --color-primary-light: #FFEDE9;
+
+  /* ── Accent — saffron (badges / highlights) ── */
+  --color-accent:        #F59E0B;
+  --color-accent-light:  #FEF3C7;
 
   /* ── Category colors ── */
-  --color-restaurant:    #E07020;
-  --color-grocery:       #2A7A4B;
-  --color-grocery-light: #E0F0E8;
+  --color-restaurant:    #F23B2F;
+  --color-grocery:       #1E8A52;
+  --color-grocery-light: #E2F3EA;
 
   /* ── Status colors ── */
   --color-success:       #2A7A4B;
@@ -138,28 +142,28 @@ a {
 /* ─── PATTERN OVERLAY ────────────────────────────────────── */
 .pattern-overlay {
   background-image:
-    linear-gradient(to right, rgba(224, 112, 32, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(224, 112, 32, 0.06) 1px, transparent 1px);
+    linear-gradient(to right, rgba(242, 59, 47, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(242, 59, 47, 0.06) 1px, transparent 1px);
   background-size: 36px 36px;
 }
 
 /* ─── FOOD GRADIENTS ─────────────────────────────────────── */
-/* Warm amber-to-clay gradient for dish thumbnail placeholders */
+/* Chili-to-saffron gradient for dish thumbnail placeholders */
 .food-gradient-dish {
   background: linear-gradient(
     135deg,
-    #E07020 0%,
+    #F23B2F 0%,
     #F59E0B 50%,
-    #C05E18 100%
+    #D12B1F 100%
   );
 }
 
-/* Terracotta-to-dark gradient for vendor/restaurant header overlays */
+/* Chili-to-dark gradient for vendor/restaurant header overlays */
 .food-gradient-vendor {
   background: linear-gradient(
     180deg,
-    rgba(224, 112, 32, 0.12) 0%,
-    rgba(192, 94, 24, 0.80) 100%
+    rgba(242, 59, 47, 0.12) 0%,
+    rgba(209, 43, 31, 0.80) 100%
   );
 }
 

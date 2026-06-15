@@ -7,7 +7,7 @@ interface Region {
 }
 
 const REGIONS: ReadonlyArray<Region> = [
-  { name: "West African", color: "#E07020" },
+  { name: "West African", color: "#F23B2F" },
   { name: "East African", color: "#1E7A4A" },
   { name: "North African", color: "#D4A017" },
   { name: "Southern African", color: "#9C4A1A" },

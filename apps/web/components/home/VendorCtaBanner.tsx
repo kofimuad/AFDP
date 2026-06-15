@@ -6,7 +6,7 @@ export function VendorCtaBanner() {
     <section className="mx-auto w-full max-w-7xl px-4 py-14 md:px-6">
       <div
         className="relative grid items-center gap-8 overflow-hidden rounded-[var(--radius-lg)] p-8 md:grid-cols-[1fr_auto] md:p-12"
-        style={{ background: "linear-gradient(135deg,var(--color-primary) 0%,#C05E18 100%)" }}
+        style={{ background: "linear-gradient(135deg,var(--color-primary) 0%,#D12B1F 100%)" }}
       >
         {/* Decorative circles */}
         <span

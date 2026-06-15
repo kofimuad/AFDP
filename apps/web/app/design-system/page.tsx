@@ -43,11 +43,11 @@ export default function DesignSystemPage() {
       {/* ── Primary Palette ── */}
       <Section title="Primary Palette">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
-          <Swatch name="Primary" value="#E07020" bg="#E07020" />
-          <Swatch name="Primary Hover" value="#C05E18" bg="#C05E18" />
-          <Swatch name="Primary Light" value="#FEF3E8" bg="#FEF3E8" />
-          <Swatch name="Grocery" value="#2A7A4B" bg="#2A7A4B" />
-          <Swatch name="Grocery Light" value="#E0F0E8" bg="#E0F0E8" />
+          <Swatch name="Primary" value="#F23B2F" bg="#F23B2F" />
+          <Swatch name="Primary Hover" value="#D12B1F" bg="#D12B1F" />
+          <Swatch name="Primary Light" value="#FFEDE9" bg="#FFEDE9" />
+          <Swatch name="Accent" value="#F59E0B" bg="#F59E0B" />
+          <Swatch name="Grocery" value="#1E8A52" bg="#1E8A52" />
         </div>
       </Section>
 
@@ -131,7 +131,7 @@ export default function DesignSystemPage() {
           </div>
           <div>
             <p className="mono-font mb-1 text-xs text-[var(--color-text-muted)]">mono — code/labels</p>
-            <p className="mono-font text-sm text-[var(--color-text-secondary)]">--color-primary: #E07020;</p>
+            <p className="mono-font text-sm text-[var(--color-text-secondary)]">--color-primary: #F23B2F;</p>
           </div>
         </div>
       </Section>

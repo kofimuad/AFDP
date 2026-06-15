@@ -28,6 +28,7 @@ from scripts.sourcing.catalog import (  # noqa: E402
     CUISINES,
     FOOD_CUISINES,
     FOOD_INGREDIENTS,
+    FOOD_RECIPE_LINKS,
     FOODS,
     INGREDIENTS,
     REGIONS,
@@ -148,6 +149,33 @@ async def _upsert_catalog(conn: asyncpg.Connection) -> tuple[dict[str, str], dic
                 fid,
                 iid,
                 quantity_note,
+            )
+
+    # Curated external recipe links — upsert by (food_id, url) so re-running on
+    # each deploy refreshes metadata without duplicating or wiping rows.
+    for food_name, links in FOOD_RECIPE_LINKS.items():
+        fid = food_ids.get(food_name)
+        if not fid:
+            continue
+        for link in links:
+            await conn.execute(
+                """
+                INSERT INTO recipe_links
+                    (id, food_id, url, source_type, title, thumbnail_url, is_primary, last_checked)
+                VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, now())
+                ON CONFLICT (food_id, url) DO UPDATE SET
+                    source_type = EXCLUDED.source_type,
+                    title = EXCLUDED.title,
+                    thumbnail_url = EXCLUDED.thumbnail_url,
+                    is_primary = EXCLUDED.is_primary,
+                    last_checked = now();
+                """,
+                fid,
+                link["url"],
+                link["source_type"],
+                link["title"],
+                link.get("thumbnail_url"),
+                link["is_primary"],
             )
 
     return food_ids, ingredient_ids

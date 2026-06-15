@@ -224,7 +224,7 @@ export default function AuthPage() {
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "radial-gradient(circle at 30% 50%,rgba(224,112,32,.18) 0%,transparent 65%)",
+              "radial-gradient(circle at 30% 50%,rgba(242,59,47,.18) 0%,transparent 65%)",
           }}
           aria-hidden="true"
         />

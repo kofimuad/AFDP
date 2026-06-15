@@ -4,9 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
+from pathlib import Path
 
 import asyncpg
 from slugify import slugify
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scripts.sourcing.catalog import FOOD_RECIPE_LINKS  # noqa: E402
 
 DB_URL = os.environ.get("DATABASE_URL")
 
@@ -196,6 +202,32 @@ async def seed() -> None:
                     food_ids[food_name],
                     ingredient_ids[ingredient_name],
                     "As needed",
+                )
+
+        # Recipe links — upsert by (food_id, url) so re-seeding stays idempotent.
+        for food_name, links in FOOD_RECIPE_LINKS.items():
+            food_id = food_ids.get(food_name)
+            if not food_id:
+                continue
+            for link in links:
+                await conn.execute(
+                    """
+                    INSERT INTO recipe_links
+                        (id, food_id, url, source_type, title, thumbnail_url, is_primary, last_checked)
+                    VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, now())
+                    ON CONFLICT (food_id, url) DO UPDATE SET
+                        source_type = EXCLUDED.source_type,
+                        title = EXCLUDED.title,
+                        thumbnail_url = EXCLUDED.thumbnail_url,
+                        is_primary = EXCLUDED.is_primary,
+                        last_checked = now();
+                    """,
+                    food_id,
+                    link["url"],
+                    link["source_type"],
+                    link["title"],
+                    link.get("thumbnail_url"),
+                    link["is_primary"],
                 )
 
         vendor_ids: dict[str, str] = {}

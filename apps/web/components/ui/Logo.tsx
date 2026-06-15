@@ -24,8 +24,8 @@ export function Logo({ variant, size = 30, className }: LogoProps) {
       >
         <defs>
           <linearGradient id="afdpLogoGradient" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#FF8A3D" />
-            <stop offset="1" stopColor="#C05E18" />
+            <stop offset="0" stopColor="#FF6B4D" />
+            <stop offset="1" stopColor="#D12B1F" />
           </linearGradient>
         </defs>
         <rect width="32" height="32" rx="9" fill="url(#afdpLogoGradient)" />

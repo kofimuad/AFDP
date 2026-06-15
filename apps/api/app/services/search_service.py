@@ -51,6 +51,20 @@ async def find_best_food_match(q: str) -> dict[str, Any] | None:
     return data
 
 
+async def find_primary_recipe_for_food(food_id: str) -> dict[str, Any] | None:
+    """Return the dish's primary recipe link, falling back to the newest curated one."""
+
+    sql = """
+        SELECT id, url, source_type, title, thumbnail_url, is_primary, last_checked
+        FROM recipe_links
+        WHERE food_id = $1
+        ORDER BY is_primary DESC, created_at ASC
+        LIMIT 1;
+    """
+    row = await fetchrow(sql, food_id)
+    return dict(row) if row else None
+
+
 async def find_ingredients_for_food(food_id: str) -> list[dict[str, Any]]:
     """Fetch ingredients linked to a food item."""
 
@@ -144,8 +158,11 @@ async def run_search(
 
     restaurants: list[dict[str, Any]] = []
     ingredients_payload: list[dict[str, Any]] = []
+    primary_recipe: dict[str, Any] | None = None
 
     if food_match:
+        primary_recipe = await find_primary_recipe_for_food(str(food_match["id"]))
+
         restaurants = await find_food_restaurants(
             food_id=str(food_match["id"]),
             lat=lat,
@@ -168,7 +185,7 @@ async def run_search(
         "food_match": food_match,
         "restaurants": restaurants,
         "ingredients": ingredients_payload,
-        "preparation_guide": None,
+        "primary_recipe": primary_recipe,
     }
 
     await set_cached_response(cache_key, response, settings.search_cache_ttl_seconds)

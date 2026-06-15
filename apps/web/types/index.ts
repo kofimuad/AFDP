@@ -58,10 +58,23 @@ export interface FoodIngredient {
   quantity_note: string | null;
 }
 
+export type RecipeSourceType = "youtube" | "article";
+
+export interface RecipeLink {
+  id: string;
+  url: string;
+  source_type: RecipeSourceType;
+  title: string;
+  thumbnail_url: string | null;
+  is_primary: boolean;
+  last_checked: string | null;
+}
+
 export interface FoodDetail extends FoodSummary {
   ingredients: FoodIngredient[];
   restaurants: VendorSummary[];
   stores: VendorSummary[];
+  recipe_links: RecipeLink[];
 }
 
 export interface IngredientDetail extends IngredientSummary {
@@ -77,7 +90,7 @@ export interface SearchResponse {
   food_match: FoodSummary | null;
   restaurants: VendorSummary[];
   ingredients: SearchIngredientBundle[];
-  preparation_guide: string | null;
+  primary_recipe: RecipeLink | null;
 }
 
 export interface VendorsQueryParams {

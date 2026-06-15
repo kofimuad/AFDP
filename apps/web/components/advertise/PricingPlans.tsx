@@ -134,7 +134,7 @@ export function PricingPlans() {
                 </span>
               )}
 
-              <p className={cn("text-xs font-bold uppercase tracking-wider", plan.dark ? "text-[#F0845A]" : "text-[var(--color-primary)]")}>
+              <p className={cn("text-xs font-bold uppercase tracking-wider", plan.dark ? "text-[#FF7A66]" : "text-[var(--color-primary)]")}>
                 {plan.name}
               </p>
               <div className="mt-3 flex items-end gap-1">
@@ -153,7 +153,7 @@ export function PricingPlans() {
                         "mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full",
                         f.included
                           ? plan.dark
-                            ? "bg-[#F0845A]/20 text-[#F0845A]"
+                            ? "bg-[#FF7A66]/20 text-[#FF7A66]"
                             : "bg-[var(--color-success-light)] text-[var(--color-success)]"
                           : plan.dark
                           ? "bg-white/10 text-white/40"

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from app.schemas.shared import FoodSummary, IngredientSummary, VendorSummary
+from app.schemas.shared import FoodSummary, IngredientSummary, RecipeLinkOut, VendorSummary
 
 
 class SearchIngredientBundle(BaseModel):
@@ -16,5 +16,6 @@ class SearchResponse(BaseModel):
     food_match: FoodSummary | None = None
     restaurants: list[VendorSummary] = Field(default_factory=list)
     ingredients: list[SearchIngredientBundle] = Field(default_factory=list)
-    preparation_guide: str | None = None
+    # The matched dish's primary recipe (YouTube/article), if one is curated.
+    primary_recipe: RecipeLinkOut | None = None
 

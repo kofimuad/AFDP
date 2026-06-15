@@ -32,6 +32,20 @@ class IngredientSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class RecipeLinkOut(BaseModel):
+    """External recipe (YouTube video or article) curated for a dish."""
+
+    id: UUID
+    url: str
+    source_type: str  # "youtube" | "article"
+    title: str
+    thumbnail_url: str | None = None
+    is_primary: bool = False
+    last_checked: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class VendorSummary(BaseModel):
     """Shared vendor payload used across list, detail, and search responses."""
 

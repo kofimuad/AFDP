@@ -689,6 +689,50 @@ FOOD_INGREDIENTS: dict[str, list[tuple[str, str]]] = {
 }
 
 
+# ── Food → curated external recipe links ───────────────────────────────────
+# We link to recipe content (YouTube / articles) rather than authoring steps;
+# the defensible layer is ingredient sourcing, not the recipe text. Each value
+# is a list of dicts: url, source_type ("youtube"|"article"), title, optional
+# thumbnail_url, and is_primary (at most one True per food). URLs verified live
+# on 2026-06-15. Seeded on every deploy via seed_vendors._upsert_catalog.
+FOOD_RECIPE_LINKS: dict[str, list[dict]] = {
+    "Jollof Rice": [
+        {
+            "url": "https://www.youtube.com/watch?v=CjbAltYAl2E",
+            "source_type": "youtube",
+            "title": "Cook Jollof Rice Like A Pro — Sweet Adjeley",
+            "thumbnail_url": "https://i.ytimg.com/vi/CjbAltYAl2E/hqdefault.jpg",
+            "is_primary": True,
+        },
+        {
+            "url": "https://cheflolaskitchen.com/jollof-rice/",
+            "source_type": "article",
+            "title": "Jollof Rice — Chef Lola's Kitchen",
+            "thumbnail_url": None,
+            "is_primary": False,
+        },
+    ],
+    "Egusi Soup": [
+        {
+            "url": "https://www.youtube.com/watch?v=lVjME9OyIfY",
+            "source_type": "youtube",
+            "title": "Nigerian Egusi Soup — Sweet Adjeley",
+            "thumbnail_url": "https://i.ytimg.com/vi/lVjME9OyIfY/hqdefault.jpg",
+            "is_primary": True,
+        },
+    ],
+    "Injera with Doro Wat": [
+        {
+            "url": "https://www.youtube.com/watch?v=d3s3NavOvZU",
+            "source_type": "youtube",
+            "title": "Doro Wat — Ethiopian Chicken Stew",
+            "thumbnail_url": "https://i.ytimg.com/vi/d3s3NavOvZU/hqdefault.jpg",
+            "is_primary": True,
+        },
+    ],
+}
+
+
 # ── Cuisine-keyed subsets (used when linking vendor_items) ─────────────────
 _NIGERIAN = [
     "Jollof Rice", "Egusi Soup", "Suya", "Fufu", "Pounded Yam", "Banga Soup",

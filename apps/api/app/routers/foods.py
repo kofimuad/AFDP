@@ -38,6 +38,17 @@ FOOD_DETAIL_EXAMPLE = {
     ],
     "restaurants": [],
     "stores": [],
+    "recipe_links": [
+        {
+            "id": "55555555-5555-5555-5555-555555555555",
+            "url": "https://www.youtube.com/watch?v=CjbAltYAl2E",
+            "source_type": "youtube",
+            "title": "Cook Jollof Rice Like A Pro — Sweet Adjeley",
+            "thumbnail_url": "https://i.ytimg.com/vi/CjbAltYAl2E/hqdefault.jpg",
+            "is_primary": True,
+            "last_checked": "2026-06-15T00:00:00Z",
+        }
+    ],
 }
 
 

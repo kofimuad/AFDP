@@ -1,11 +1,12 @@
 "use client";
 
-import { ChevronRight, MapPin, ShoppingBasket, Store, Utensils } from "lucide-react";
+import { ChefHat, ChevronRight, Clock, Flame, MapPin, PlayCircle, ShoppingBasket, Store, Utensils } from "lucide-react";
 import Link from "next/link";
 
 import { Accordion, AccordionItem } from "@/components/ui/Accordion";
 import { ResultCard } from "@/components/search/ResultCard";
 import { SaveDishButton } from "@/components/food/SaveDishButton";
+import { RecipeLinks } from "@/components/food/RecipeLinks";
 import { FoodDetailMap } from "@/components/food/FoodDetailMap.client";
 import type { FoodDetail as FoodDetailType, FoodSummary, VendorSummary } from "@/types";
 
@@ -20,6 +21,10 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
   const mapVendors = [...food.restaurants, ...food.stores];
   const findNearMeHref = `/search?q=${encodeURIComponent(food.name)}` as const;
 
+  const prep = food.prep_minutes ?? null;
+  const cook = food.cook_minutes ?? null;
+  const total = (prep ?? 0) + (cook ?? 0);
+
   return (
     <div className="space-y-8">
       {/* ── Breadcrumb (desktop) ── */}
@@ -27,7 +32,7 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
         <ol className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
           <li><Link href="/" className="transition hover:text-[var(--color-text-primary)]">Home</Link></li>
           <li aria-hidden><ChevronRight size={14} /></li>
-          <li><Link href="/foods" className="transition hover:text-[var(--color-text-primary)]">Dishes</Link></li>
+          <li><Link href="/foods" className="transition hover:text-[var(--color-text-primary)]">Cook It Yourself</Link></li>
           <li aria-hidden><ChevronRight size={14} /></li>
           <li className="font-medium text-[var(--color-text-primary)]" aria-current="page">{food.name}</li>
         </ol>
@@ -47,137 +52,207 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
         )}
         <div className="food-image-overlay absolute inset-0" aria-hidden="true" />
         <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
+          {food.cuisines.length > 0 && (
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-white/80">
+              {food.cuisines.join(" · ")}
+            </p>
+          )}
           <h1 className="display-font text-3xl font-extrabold tracking-tight text-white md:text-5xl">
             {food.name}
           </h1>
           <div className="mt-3 flex flex-wrap gap-2">
-            {food.restaurants.length > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary)] px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white">
-                <Utensils size={11} />
-                {food.restaurants.length} {food.restaurants.length === 1 ? "restaurant" : "restaurants"}
+            {total > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-sm">
+                <Clock size={11} />
+                {total} min total
               </span>
             )}
             {food.stores.length > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-grocery)] px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white">
+                <ShoppingBasket size={11} />
+                Ingredients at {food.stores.length} {food.stores.length === 1 ? "store" : "stores"}
+              </span>
+            )}
+            {food.restaurants.length > 0 && (
               <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-sm">
-                <Store size={11} />
-                {food.stores.length} {food.stores.length === 1 ? "store" : "stores"}
+                <Utensils size={11} />
+                {food.restaurants.length} {food.restaurants.length === 1 ? "restaurant" : "restaurants"}
               </span>
             )}
           </div>
         </div>
       </header>
 
-      {/* ── Description + CTAs ── */}
-      <section className="space-y-5">
-        <p className="max-w-3xl text-base leading-relaxed text-[var(--color-text-muted)]">
-          {food.description ?? "A beloved dish from across the African continent — discover where to order it nearby or gather the ingredients to cook it yourself."}
+      {/* ── Description + origin ── */}
+      <div className="max-w-3xl space-y-2">
+        <p className="text-base leading-relaxed text-[var(--color-text-muted)]">
+          {food.description ??
+            "A beloved dish from across the African continent — gather the ingredients and make it yourself, or order it from a spot nearby."}
         </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href={findNearMeHref}
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--color-primary)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)]"
-          >
-            <MapPin size={16} />
-            Find Near Me
-          </Link>
-          <SaveDishButton
-            food={{ slug: food.slug, name: food.name, description: food.description, image_url: food.image_url }}
-          />
+        {(food.region || food.cuisines.length > 0) && (
+          <p className="text-sm text-[var(--color-text-muted)]">
+            <span className="font-semibold text-[var(--color-text-secondary)]">Origin:</span>{" "}
+            {[food.region, ...food.cuisines].filter(Boolean).join(" · ")}
+          </p>
+        )}
+      </div>
+
+      {/* ════════ COOK IT YOURSELF — the headline section ════════ */}
+      <section className="overflow-hidden rounded-[var(--radius-lg)] border-[1.5px] border-[var(--color-primary-light)] bg-[var(--color-surface)] shadow-[var(--shadow-md)]">
+        {/* Banner */}
+        <div
+          className="flex items-center gap-3 px-5 py-4 text-white md:px-7"
+          style={{ background: "linear-gradient(135deg,var(--color-primary) 0%,#D12B1F 100%)" }}
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20">
+            <ChefHat size={24} strokeWidth={2.2} />
+          </span>
+          <div>
+            <h2 className="display-font text-xl font-extrabold tracking-tight md:text-2xl">
+              Cook it yourself
+            </h2>
+            <p className="text-sm text-white/85">
+              Everything you need to make {food.name} at home.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-6 p-5 md:p-7">
+          {/* Recipe video / links */}
+          {food.recipe_links.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="display-font flex items-center gap-2 text-lg font-bold text-[var(--color-text-primary)]">
+                <PlayCircle size={18} className="text-[var(--color-primary)]" />
+                Watch the recipe
+              </h3>
+              <RecipeLinks links={food.recipe_links} dishName={food.name} />
+            </div>
+          )}
+
+          {/* Time stats */}
+          {(prep != null || cook != null) && (
+            <div className="grid grid-cols-3 gap-3">
+              <TimeStat icon={<Clock size={16} />} label="Prep" minutes={prep} />
+              <TimeStat icon={<Flame size={16} />} label="Cook" minutes={cook} />
+              <TimeStat icon={<ChefHat size={16} />} label="Total" minutes={total > 0 ? total : null} highlight />
+            </div>
+          )}
+
+          {/* Shopping list */}
+          {food.ingredients.length > 0 && (
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="display-font flex items-center gap-2 text-lg font-bold text-[var(--color-text-primary)]">
+                  <ShoppingBasket size={18} className="text-[var(--color-grocery)]" />
+                  Shopping list
+                </h3>
+                <span className="text-sm text-[var(--color-text-muted)]">
+                  {food.ingredients.length} {food.ingredients.length === 1 ? "ingredient" : "ingredients"}
+                </span>
+              </div>
+              <ul className="divide-y divide-[var(--color-border)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)]">
+                {food.ingredients.map((item) => (
+                  <li key={item.ingredient.id}>
+                    <Link
+                      href={`/search?q=${encodeURIComponent(item.ingredient.name)}`}
+                      className="group flex items-center gap-3 bg-[var(--color-surface)] px-4 py-3 transition hover:bg-[var(--color-surface-hover)]"
+                    >
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--color-grocery)]" aria-hidden="true" />
+                      <span className="flex-1 text-sm font-medium text-[var(--color-text-primary)]">
+                        {item.ingredient.name}
+                        {item.quantity_note ? (
+                          <span className="font-normal text-[var(--color-text-muted)]"> · {item.quantity_note}</span>
+                        ) : null}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-primary)] opacity-0 transition group-hover:opacity-100">
+                        Find nearby
+                        <ChevronRight size={13} />
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Where to buy + primary CTA */}
+          <div className="space-y-4">
+            {food.stores.length > 0 ? (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-[var(--color-text-primary)]">
+                  Stores that stock these ingredients
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {food.stores.map((store) => (
+                    <Link
+                      key={store.id}
+                      href={`/vendors/${store.slug}`}
+                      className="inline-flex items-center gap-2 rounded-full border-[1.5px] border-[var(--color-grocery-light)] bg-[var(--color-grocery-light)] px-4 py-2 text-sm font-medium text-[var(--color-grocery)] transition hover:border-[var(--color-grocery)]"
+                    >
+                      <Store size={14} />
+                      {store.name}
+                      {store.distance_km != null ? ` · ${store.distance_km.toFixed(1)} km` : ""}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--color-text-muted)]">
+                Tap any ingredient above to find nearby stores that sell it.
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <Link
+                href={findNearMeHref}
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--color-primary)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)]"
+              >
+                <MapPin size={16} />
+                Find ingredients near me
+              </Link>
+              <SaveDishButton
+                food={{ slug: food.slug, name: food.name, description: food.description, image_url: food.image_url }}
+              />
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── Key Ingredients (ingredient → store mapping, SCRUM-34) ── */}
-      {food.ingredients.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="display-font text-xl font-bold text-[var(--color-text-primary)]">
-            Key Ingredients
+      {/* ── Order nearby (secondary) ── */}
+      <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 md:p-6">
+        <div className="mb-1 flex items-center gap-2">
+          <Utensils size={18} className="text-[var(--color-text-muted)]" />
+          <h2 className="display-font text-lg font-bold text-[var(--color-text-primary)]">
+            Not in the mood to cook?
           </h2>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Tap an ingredient to find nearby stores that sell it.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {food.ingredients.map((item, index) => (
-              <Link
-                key={item.ingredient.id}
-                href={`/search?q=${encodeURIComponent(item.ingredient.name)}`}
-                className={
-                  index === 0
-                    ? "inline-flex items-center rounded-full border-[1.5px] border-[var(--color-primary-light)] bg-[var(--color-primary-light)] px-3.5 py-1.5 text-sm font-medium text-[var(--color-primary)] transition hover:border-[var(--color-primary)]"
-                    : "inline-flex items-center rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-1.5 text-sm font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-                }
-              >
-                {item.ingredient.name}
-                {item.quantity_note ? ` · ${item.quantity_note}` : ""}
-              </Link>
+        </div>
+        <p className="mb-4 text-sm text-[var(--color-text-muted)]">
+          {food.restaurants.length > 0
+            ? `${food.restaurants.length} ${food.restaurants.length === 1 ? "restaurant serves" : "restaurants serve"} ${food.name} near you.`
+            : `No restaurants serving ${food.name} yet — be the first to add one.`}
+        </p>
+        {food.restaurants.length > 0 ? (
+          <div className="space-y-3">
+            {food.restaurants.slice(0, 4).map((vendor) => (
+              <ResultCard
+                key={vendor.id}
+                vendor={vendor}
+                active={activeVendorId === vendor.id}
+                onClick={() => onVendorSelect?.(vendor)}
+              />
             ))}
+            {food.restaurants.length > 4 && (
+              <Link
+                href={findNearMeHref}
+                className="flex w-full items-center justify-center rounded-full border-2 border-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-light)]"
+              >
+                View all {food.restaurants.length} restaurants
+              </Link>
+            )}
           </div>
-        </section>
-      )}
-
-      {/* ── Order nearby vs Cook it yourself (SCRUM-35) ── */}
-      <section className="grid gap-8 lg:grid-cols-2">
-        {/* Order nearby */}
-        <div>
-          <h2 className="display-font mb-1 flex items-center gap-2 text-xl font-bold text-[var(--color-text-primary)]">
-            <Utensils size={20} className="text-[var(--color-primary)]" />
-            Order nearby
-          </h2>
-          <p className="mb-4 text-sm text-[var(--color-text-muted)]">
-            {food.restaurants.length > 0
-              ? `${food.restaurants.length} ${food.restaurants.length === 1 ? "restaurant serves" : "restaurants serve"} ${food.name} near you`
-              : `No restaurants serving ${food.name} yet — be the first to add one.`}
-          </p>
-          {food.restaurants.length > 0 ? (
-            <div className="space-y-3">
-              {food.restaurants.slice(0, 4).map((vendor) => (
-                <ResultCard
-                  key={vendor.id}
-                  vendor={vendor}
-                  active={activeVendorId === vendor.id}
-                  onClick={() => onVendorSelect?.(vendor)}
-                />
-              ))}
-              {food.restaurants.length > 4 && (
-                <Link
-                  href={findNearMeHref}
-                  className="flex w-full items-center justify-center rounded-full border-2 border-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-light)]"
-                >
-                  View all {food.restaurants.length} restaurants
-                </Link>
-              )}
-            </div>
-          ) : (
-            <EmptyHint label="No restaurants listed yet." />
-          )}
-        </div>
-
-        {/* Cook it yourself */}
-        <div>
-          <h2 className="display-font mb-1 flex items-center gap-2 text-xl font-bold text-[var(--color-text-primary)]">
-            <ShoppingBasket size={20} className="text-[var(--color-grocery)]" />
-            Cook it yourself
-          </h2>
-          <p className="mb-4 text-sm text-[var(--color-text-muted)]">
-            Buy the ingredients and make {food.name} at home.
-          </p>
-          {food.stores.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {food.stores.map((store) => (
-                <Link
-                  key={store.id}
-                  href={`/vendors/${store.slug}`}
-                  className="inline-flex items-center gap-2 rounded-full border-[1.5px] border-[var(--color-grocery-light)] bg-[var(--color-grocery-light)] px-4 py-2 text-sm font-medium text-[var(--color-grocery)] transition hover:border-[var(--color-grocery)]"
-                >
-                  <Store size={14} />
-                  {store.name}
-                  {store.distance_km != null ? ` · ${store.distance_km.toFixed(1)} km` : ""}
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <EmptyHint label="No ingredient stores listed yet — tap an ingredient above to search." />
-          )}
-        </div>
+        ) : (
+          <EmptyHint label="No restaurants listed yet." />
+        )}
       </section>
 
       {/* ── About this dish (expandable) ── */}
@@ -210,7 +285,7 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
               Similar Dishes You Might Like
             </h2>
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              More African dishes to explore
+              More African dishes to cook
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-5">
@@ -243,6 +318,42 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+function TimeStat({
+  icon,
+  label,
+  minutes,
+  highlight = false
+}: {
+  icon: React.ReactNode;
+  label: string;
+  minutes: number | null;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className={
+        highlight
+          ? "rounded-[var(--radius-md)] border-[1.5px] border-[var(--color-primary-light)] bg-[var(--color-primary-light)] px-3 py-3 text-center"
+          : "rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 text-center"
+      }
+    >
+      <span
+        className={
+          highlight
+            ? "inline-flex items-center gap-1.5 text-[var(--color-primary)]"
+            : "inline-flex items-center gap-1.5 text-[var(--color-text-muted)]"
+        }
+      >
+        {icon}
+        <span className="text-xs font-semibold uppercase tracking-wider">{label}</span>
+      </span>
+      <p className="mt-1 text-lg font-extrabold text-[var(--color-text-primary)]">
+        {minutes != null && minutes > 0 ? `${minutes} min` : "—"}
+      </p>
     </div>
   );
 }

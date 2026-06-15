@@ -18,13 +18,15 @@ interface FoodsExplorerProps {
   cuisines: string[];
   activeRegion: string | null;
   activeCuisine: string | null;
+  /** Seed the search box (e.g. from the homepage "Cook it yourself" search). */
+  initialQuery?: string;
 }
 
 const PAGE_SIZE = 12;
 const MAX_SUGGESTIONS = 8;
 
 const REGION_DOT: Record<string, string> = {
-  "West African": "#E07020",
+  "West African": "#F23B2F",
   "East African": "#1E7A4A",
   "North African": "#D4A017",
   "Southern African": "#9C4A1A",
@@ -54,12 +56,13 @@ export function FoodsExplorer({
   regions,
   cuisines,
   activeRegion,
-  activeCuisine
+  activeCuisine,
+  initialQuery
 }: FoodsExplorerProps) {
   const router = useRouter();
   const { showToast } = useToast();
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery ?? "");
   const [sort, setSort] = useState<SortKey>("az");
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [locating, setLocating] = useState(false);

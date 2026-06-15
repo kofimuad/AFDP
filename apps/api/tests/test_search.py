@@ -18,6 +18,22 @@ async def test_search_returns_food_match_and_restaurants(client) -> None:
 
 
 @pytest.mark.asyncio
+async def test_search_surfaces_primary_recipe(client) -> None:
+    # Distinct radius keeps a fresh cache key so we exercise the live code path.
+    response = await client.get(
+        "/api/v1/search",
+        params={"q": "Jollof Rice", "lat": 38.9072, "lng": -77.0369, "radius_km": 22},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert "primary_recipe" in payload
+    assert payload["primary_recipe"] is not None
+    assert payload["primary_recipe"]["is_primary"] is True
+    assert payload["primary_recipe"]["url"]
+
+
+@pytest.mark.asyncio
 async def test_search_unknown_food_returns_empty_results(client) -> None:
     response = await client.get(
         "/api/v1/search",
@@ -29,3 +45,4 @@ async def test_search_unknown_food_returns_empty_results(client) -> None:
     assert payload["food_match"] is None
     assert payload["restaurants"] == []
     assert payload["ingredients"] == []
+    assert payload["primary_recipe"] is None

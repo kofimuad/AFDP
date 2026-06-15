@@ -135,6 +135,16 @@ async def get_food_detail(slug: str, lat: float | None = None, lng: float | None
         food["id"],
     )
 
+    recipe_links = await fetch(
+        """
+        SELECT id, url, source_type, title, thumbnail_url, is_primary, last_checked
+        FROM recipe_links
+        WHERE food_id = $1
+        ORDER BY is_primary DESC, created_at ASC;
+        """,
+        food["id"],
+    )
+
     restaurants = await _fetch_vendors_for_food(food_id=food["id"], relation="food", vendor_type="restaurant", lat=lat, lng=lng)
     stores = await _fetch_vendors_for_food(food_id=food["id"], relation="ingredient", vendor_type="grocery_store", lat=lat, lng=lng)
 
@@ -154,6 +164,7 @@ async def get_food_detail(slug: str, lat: float | None = None, lng: float | None
         ],
         "restaurants": restaurants,
         "stores": stores,
+        "recipe_links": [dict(row) for row in recipe_links],
     }
 
 

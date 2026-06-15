@@ -37,7 +37,7 @@ const CUISINES = [
 ];
 
 interface FoodsPageProps {
-  searchParams: { region?: string; cuisine?: string };
+  searchParams: { region?: string; cuisine?: string; q?: string };
 }
 
 export default async function FoodsPage({ searchParams }: FoodsPageProps) {
@@ -61,6 +61,7 @@ export default async function FoodsPage({ searchParams }: FoodsPageProps) {
       cuisines={CUISINES}
       activeRegion={activeRegion ?? null}
       activeCuisine={activeCuisine ?? null}
+      initialQuery={searchParams.q?.trim() || undefined}
     />
   );
 }

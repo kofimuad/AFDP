@@ -1,4 +1,4 @@
-import { MapPin, Search, Utensils } from "lucide-react";
+import { ChefHat, ClipboardList, ShoppingBasket } from "lucide-react";
 
 interface Step {
   num: string;
@@ -10,21 +10,21 @@ interface Step {
 const STEPS: ReadonlyArray<Step> = [
   {
     num: "1",
-    title: "Search a dish or cuisine",
-    desc: "Type in a dish you're craving — Jollof Rice, Injera, Ndolé — or browse by country, region, or ingredient.",
-    icon: <Search size={28} strokeWidth={2} />
+    title: "Pick a dish to make",
+    desc: "Browse African dishes by country or region — Jollof Rice, Injera, Ndolé — and choose what you're cooking tonight.",
+    icon: <ChefHat size={28} strokeWidth={2} />
   },
   {
     num: "2",
-    title: "Discover nearby vendors",
-    desc: "See restaurants and grocery stores near you on an interactive map. Filter by type, distance, or opening hours.",
-    icon: <MapPin size={28} strokeWidth={2} />
+    title: "Get the recipe & shopping list",
+    desc: "See prep and cook times plus the full ingredient list, so you know exactly what it takes to make it from scratch.",
+    icon: <ClipboardList size={28} strokeWidth={2} />
   },
   {
     num: "3",
-    title: "Go get your food",
-    desc: "Get directions, browse the menu, save your favourites, and share your finds with the community.",
-    icon: <Utensils size={28} strokeWidth={2} />
+    title: "Grab the ingredients nearby",
+    desc: "Find African grocery stores near you that stock each ingredient — or order the dish from a local spot if you'd rather not cook.",
+    icon: <ShoppingBasket size={28} strokeWidth={2} />
   }
 ];
 
@@ -33,10 +33,10 @@ export function HowItWorks() {
     <section className="mx-auto w-full max-w-7xl px-4 py-14 md:px-6">
       <div className="mx-auto max-w-lg text-center">
         <h2 className="display-font text-2xl font-extrabold tracking-tight text-[var(--color-text-primary)] sm:text-3xl">
-          Simple as that.
+          From craving to cooking.
         </h2>
         <p className="mt-2 text-base text-[var(--color-text-muted)]">
-          Three steps to your next authentic African meal.
+          Three steps to making an authentic African meal at home.
         </p>
       </div>
 
@@ -50,8 +50,8 @@ export function HowItWorks() {
               {step.num}
             </span>
             <div
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-[0_4px_14px_rgba(224,112,32,.28)]"
-              style={{ background: "linear-gradient(135deg,var(--color-primary) 0%,#B85518 100%)" }}
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-[0_4px_14px_rgba(242,59,47,.28)]"
+              style={{ background: "linear-gradient(135deg,var(--color-primary) 0%,#D12B1F 100%)" }}
               aria-hidden="true"
             >
               {step.icon}

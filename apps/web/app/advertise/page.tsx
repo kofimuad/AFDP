@@ -48,7 +48,7 @@ export default function AdvertisePage() {
         style={{ background: "linear-gradient(135deg,#1A0F08 0%,#2D1508 100%)" }}
       >
         <h1 className="display-font mx-auto max-w-2xl text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
-          Grow your business with <span className="text-[#F0845A]">AFDP</span>
+          Grow your business with <span className="text-[#FF7A66]">AFDP</span>
         </h1>
         <p className="mx-auto mt-4 max-w-lg text-base text-white/70">
           Reach thousands of people searching for authentic African food near them. Start free, upgrade when you&rsquo;re ready.
@@ -80,7 +80,7 @@ export default function AdvertisePage() {
       <section className="mx-auto w-full max-w-7xl px-4 md:px-6">
         <div
           className="rounded-[var(--radius-xl)] px-6 py-14 text-center md:px-10"
-          style={{ background: "linear-gradient(135deg,var(--color-primary) 0%,#C05E18 100%)" }}
+          style={{ background: "linear-gradient(135deg,var(--color-primary) 0%,#D12B1F 100%)" }}
         >
           <h2 className="display-font text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
             Ready to reach more customers?
