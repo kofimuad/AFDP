@@ -7,6 +7,10 @@ import { StatsBar } from "@/components/home/StatsBar";
 import { VendorCtaBanner } from "@/components/home/VendorCtaBanner";
 import { getFoods, getVendors } from "@/lib/api";
 
+// Render on each request so the homepage reflects live catalog data (dish images,
+// featured vendors) instead of a stale snapshot baked at build time.
+export const dynamic = "force-dynamic";
+
 const STATS = [
   { value: "2,400+", label: "African dishes listed" },
   { value: "380+", label: "Verified vendors" },

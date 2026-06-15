@@ -4,6 +4,10 @@ import { FoodDetailInteractive } from "@/components/food/FoodDetailInteractive.c
 import { getFood, getFoods } from "@/lib/api";
 import type { FoodSummary } from "@/types";
 
+// Render on each request so dish images/details reflect live catalog data rather
+// than a snapshot baked at build time.
+export const dynamic = "force-dynamic";
+
 interface FoodDetailPageProps {
   params: { slug: string };
 }
