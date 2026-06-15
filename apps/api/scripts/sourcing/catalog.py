@@ -697,38 +697,194 @@ FOOD_INGREDIENTS: dict[str, list[tuple[str, str]]] = {
 # on 2026-06-15. Seeded on every deploy via seed_vendors._upsert_catalog.
 FOOD_RECIPE_LINKS: dict[str, list[dict]] = {
     "Jollof Rice": [
-        {
-            "url": "https://www.youtube.com/watch?v=CjbAltYAl2E",
-            "source_type": "youtube",
-            "title": "Cook Jollof Rice Like A Pro — Sweet Adjeley",
-            "thumbnail_url": "https://i.ytimg.com/vi/CjbAltYAl2E/hqdefault.jpg",
-            "is_primary": True,
-        },
-        {
-            "url": "https://cheflolaskitchen.com/jollof-rice/",
-            "source_type": "article",
-            "title": "Jollof Rice — Chef Lola's Kitchen",
-            "thumbnail_url": None,
-            "is_primary": False,
-        },
+        {"url": "https://www.youtube.com/watch?v=CjbAltYAl2E", "source_type": "youtube", "title": "Cook Jollof Rice like a pro - Sweet Adjeley", "thumbnail_url": "https://i.ytimg.com/vi/CjbAltYAl2E/hqdefault.jpg", "is_primary": True},
+        {"url": "https://cheflolaskitchen.com/jollof-rice/", "source_type": "article", "title": "Jollof Rice - Chef Lolas Kitchen", "thumbnail_url": None, "is_primary": False},
     ],
     "Egusi Soup": [
-        {
-            "url": "https://www.youtube.com/watch?v=lVjME9OyIfY",
-            "source_type": "youtube",
-            "title": "Nigerian Egusi Soup — Sweet Adjeley",
-            "thumbnail_url": "https://i.ytimg.com/vi/lVjME9OyIfY/hqdefault.jpg",
-            "is_primary": True,
-        },
+        {"url": "https://www.youtube.com/watch?v=lVjME9OyIfY", "source_type": "youtube", "title": "Nigerian Egusi Soup - Sweet Adjeley", "thumbnail_url": "https://i.ytimg.com/vi/lVjME9OyIfY/hqdefault.jpg", "is_primary": True},
+    ],
+    "Suya": [
+        {"url": "https://www.youtube.com/watch?v=dIyuRABa9rw", "source_type": "youtube", "title": "Suya - The Kitchen Muse", "thumbnail_url": "https://i.ytimg.com/vi/dIyuRABa9rw/hqdefault.jpg", "is_primary": True},
+    ],
+    "Fufu": [
+        {"url": "https://www.youtube.com/watch?v=zKvfVNjwufc", "source_type": "youtube", "title": "Cassava Fufu, step by step - Queenvarieties", "thumbnail_url": "https://i.ytimg.com/vi/zKvfVNjwufc/hqdefault.jpg", "is_primary": True},
+    ],
+    "Pounded Yam": [
+        {"url": "https://www.youtube.com/watch?v=RwAis5ZxHUY", "source_type": "youtube", "title": "Pounded Yam without pounding - Daniel Ochuko", "thumbnail_url": "https://i.ytimg.com/vi/RwAis5ZxHUY/hqdefault.jpg", "is_primary": True},
+    ],
+    "Banga Soup": [
+        {"url": "https://www.youtube.com/watch?v=dFBSH1FYFUM", "source_type": "youtube", "title": "Rich Banga Soup (Ofe Akwu) - Cooking With Ijey", "thumbnail_url": "https://i.ytimg.com/vi/dFBSH1FYFUM/hqdefault.jpg", "is_primary": True},
+    ],
+    "Afang Soup": [
+        {"url": "https://www.youtube.com/watch?v=wiZyjeTh8cQ", "source_type": "youtube", "title": "Afang Soup - Sisi Jemimah", "thumbnail_url": "https://i.ytimg.com/vi/wiZyjeTh8cQ/hqdefault.jpg", "is_primary": True},
+    ],
+    "Edikang Ikong": [
+        {"url": "https://www.youtube.com/watch?v=i80-r_xV0tY", "source_type": "youtube", "title": "Edikang Ikong, Calabar style - Ifys Kitchen", "thumbnail_url": "https://i.ytimg.com/vi/i80-r_xV0tY/hqdefault.jpg", "is_primary": True},
+    ],
+    "Ogbono Soup": [
+        {"url": "https://www.youtube.com/watch?v=kahuJ68GaTk", "source_type": "youtube", "title": "Ogbono Soup - Ifys Kitchen", "thumbnail_url": "https://i.ytimg.com/vi/kahuJ68GaTk/hqdefault.jpg", "is_primary": True},
+    ],
+    "Moi Moi": [
+        {"url": "https://www.youtube.com/watch?v=9a4Cbw9VqvE", "source_type": "youtube", "title": "Moi Moi steamed bean pudding - Jiddahs Kitchen", "thumbnail_url": "https://i.ytimg.com/vi/9a4Cbw9VqvE/hqdefault.jpg", "is_primary": True},
+    ],
+    "Akara": [
+        {"url": "https://www.youtube.com/watch?v=K-XXBHMyb04", "source_type": "youtube", "title": "Akara (Nigerian bean cakes) - Airhes Corner", "thumbnail_url": "https://i.ytimg.com/vi/K-XXBHMyb04/hqdefault.jpg", "is_primary": True},
+    ],
+    "Pepper Soup": [
+        {"url": "https://www.youtube.com/watch?v=_EPtwLsFpoY", "source_type": "youtube", "title": "Assorted meat pepper soup - Ijeoma999 Kitchen", "thumbnail_url": "https://i.ytimg.com/vi/_EPtwLsFpoY/hqdefault.jpg", "is_primary": True},
+    ],
+    "Efo Riro": [
+        {"url": "https://www.youtube.com/watch?v=lxCY5fObe30", "source_type": "youtube", "title": "Efo Riro spinach stew - Sisi Jemimah", "thumbnail_url": "https://i.ytimg.com/vi/lxCY5fObe30/hqdefault.jpg", "is_primary": True},
+    ],
+    "Amala and Ewedu": [
+        {"url": "https://www.youtube.com/watch?v=PMSSLgjtC6A", "source_type": "youtube", "title": "Amala, Ewedu & Gbegiri (Abula) - Chinenye Uchenna", "thumbnail_url": "https://i.ytimg.com/vi/PMSSLgjtC6A/hqdefault.jpg", "is_primary": True},
+    ],
+    "Waakye": [
+        {"url": "https://www.youtube.com/watch?v=cpQ7f8z44io", "source_type": "youtube", "title": "Waakye (Ghana rice & beans) - Cooking with Efya", "thumbnail_url": "https://i.ytimg.com/vi/cpQ7f8z44io/hqdefault.jpg", "is_primary": True},
+    ],
+    "Kelewele": [
+        {"url": "https://www.youtube.com/watch?v=mTRQXj7oSVs", "source_type": "youtube", "title": "Kelewele spicy fried plantain - Sasu Flavas", "thumbnail_url": "https://i.ytimg.com/vi/mTRQXj7oSVs/hqdefault.jpg", "is_primary": True},
+    ],
+    "Banku and Tilapia": [
+        {"url": "https://www.youtube.com/watch?v=jE4LyTrumKQ", "source_type": "youtube", "title": "Banku & grilled Tilapia - Tasty n Fresh", "thumbnail_url": "https://i.ytimg.com/vi/jE4LyTrumKQ/hqdefault.jpg", "is_primary": True},
+    ],
+    "Fufu and Light Soup": [
+        {"url": "https://www.youtube.com/watch?v=_QJ3PGjHw9c", "source_type": "youtube", "title": "Fufu & Light Soup - Cooking with Efya", "thumbnail_url": "https://i.ytimg.com/vi/_QJ3PGjHw9c/hqdefault.jpg", "is_primary": True},
+    ],
+    "Okra Soup": [
+        {"url": "https://www.youtube.com/watch?v=eUWOmvyhU6Q", "source_type": "youtube", "title": "Okra Soup - Sisi Jemimah", "thumbnail_url": "https://i.ytimg.com/vi/eUWOmvyhU6Q/hqdefault.jpg", "is_primary": True},
+    ],
+    "Groundnut Soup": [
+        {"url": "https://www.youtube.com/watch?v=TyUy3-APD5Q", "source_type": "youtube", "title": "Ghanaian Groundnut (Peanut) Soup - Sweet Adjeley", "thumbnail_url": "https://i.ytimg.com/vi/TyUy3-APD5Q/hqdefault.jpg", "is_primary": True},
+    ],
+    "Thieboudienne": [
+        {"url": "https://www.youtube.com/watch?v=r7Zdp2TpmAA", "source_type": "youtube", "title": "Authentic Senegalese Thieboudienne - Cooking With Claudy", "thumbnail_url": "https://i.ytimg.com/vi/r7Zdp2TpmAA/hqdefault.jpg", "is_primary": True},
+    ],
+    "Yassa Poulet": [
+        {"url": "https://www.youtube.com/watch?v=JkBLnng7at4", "source_type": "youtube", "title": "Poulet Yassa, Senegalese chicken - Receiteira", "thumbnail_url": "https://i.ytimg.com/vi/JkBLnng7at4/hqdefault.jpg", "is_primary": True},
+    ],
+    "Mafe": [
+        {"url": "https://www.youtube.com/watch?v=UOorPVtWPQ8", "source_type": "youtube", "title": "Senegalese Mafe peanut stew - Hanne Cuisine", "thumbnail_url": "https://i.ytimg.com/vi/UOorPVtWPQ8/hqdefault.jpg", "is_primary": True},
+    ],
+    "Attieke": [
+        {"url": "https://www.youtube.com/watch?v=tnuCssHAwwg", "source_type": "youtube", "title": "Attieke cassava couscous - Cooking with Sindaco", "thumbnail_url": "https://i.ytimg.com/vi/tnuCssHAwwg/hqdefault.jpg", "is_primary": True},
+    ],
+    "Kedjenou": [
+        {"url": "https://www.youtube.com/watch?v=Bj5vjc7IIPs", "source_type": "youtube", "title": "Kedjenou de Poulet - Omo Alluah", "thumbnail_url": "https://i.ytimg.com/vi/Bj5vjc7IIPs/hqdefault.jpg", "is_primary": True},
+    ],
+    "Riz Gras": [
+        {"url": "https://www.youtube.com/watch?v=WqzemaPzoCo", "source_type": "youtube", "title": "Riz Gras with lamb - Kadirecipes", "thumbnail_url": "https://i.ytimg.com/vi/WqzemaPzoCo/hqdefault.jpg", "is_primary": True},
+    ],
+    "Chin Chin": [
+        {"url": "https://www.youtube.com/watch?v=1SZ5RKFm5Sk", "source_type": "youtube", "title": "Crunchy Chin Chin - Ifys Kitchen", "thumbnail_url": "https://i.ytimg.com/vi/1SZ5RKFm5Sk/hqdefault.jpg", "is_primary": True},
+    ],
+    "Plantain Chips": [
+        {"url": "https://www.youtube.com/watch?v=m64arE90nyY", "source_type": "youtube", "title": "Homemade Plantain Chips - Chizoba Edemuzor", "thumbnail_url": "https://i.ytimg.com/vi/m64arE90nyY/hqdefault.jpg", "is_primary": True},
+    ],
+    "Injera": [
+        {"url": "https://www.youtube.com/watch?v=DAq6NUuM6Qk", "source_type": "youtube", "title": "Injera, Ethiopian sour flatbread - Earthly Superfood", "thumbnail_url": "https://i.ytimg.com/vi/DAq6NUuM6Qk/hqdefault.jpg", "is_primary": True},
+    ],
+    "Doro Wat": [
+        {"url": "https://www.youtube.com/watch?v=zi4AT6uYKUs", "source_type": "youtube", "title": "Doro Wat, spicy chicken stew - Munchies", "thumbnail_url": "https://i.ytimg.com/vi/zi4AT6uYKUs/hqdefault.jpg", "is_primary": True},
     ],
     "Injera with Doro Wat": [
-        {
-            "url": "https://www.youtube.com/watch?v=d3s3NavOvZU",
-            "source_type": "youtube",
-            "title": "Doro Wat — Ethiopian Chicken Stew",
-            "thumbnail_url": "https://i.ytimg.com/vi/d3s3NavOvZU/hqdefault.jpg",
-            "is_primary": True,
-        },
+        {"url": "https://www.youtube.com/watch?v=d3s3NavOvZU", "source_type": "youtube", "title": "Doro Wat, Ethiopian chicken stew - How To Cook Great", "thumbnail_url": "https://i.ytimg.com/vi/d3s3NavOvZU/hqdefault.jpg", "is_primary": True},
+    ],
+    "Injera with Tibs": [
+        {"url": "https://www.youtube.com/watch?v=IChsogXzT5s", "source_type": "youtube", "title": "Ethiopian Beef Tibs - How To Cook Great", "thumbnail_url": "https://i.ytimg.com/vi/IChsogXzT5s/hqdefault.jpg", "is_primary": True},
+    ],
+    "Injera with Kitfo": [
+        {"url": "https://www.youtube.com/watch?v=jpwrHDBwvp8", "source_type": "youtube", "title": "Ethiopian Kitfo - Dagi Fasika", "thumbnail_url": "https://i.ytimg.com/vi/jpwrHDBwvp8/hqdefault.jpg", "is_primary": True},
+    ],
+    "Misir Wat": [
+        {"url": "https://www.youtube.com/watch?v=YWck6d7ZjFY", "source_type": "youtube", "title": "Misir Wot red lentil stew - eatahfood", "thumbnail_url": "https://i.ytimg.com/vi/YWck6d7ZjFY/hqdefault.jpg", "is_primary": True},
+    ],
+    "Shiro": [
+        {"url": "https://www.youtube.com/watch?v=7aQX-hIvnPM", "source_type": "youtube", "title": "Shiro chickpea stew - Asedos Kitchen", "thumbnail_url": "https://i.ytimg.com/vi/7aQX-hIvnPM/hqdefault.jpg", "is_primary": True},
+    ],
+    "Ugali": [
+        {"url": "https://www.youtube.com/watch?v=rW2xnLyXV3w", "source_type": "youtube", "title": "Ugali - Chef Josh", "thumbnail_url": "https://i.ytimg.com/vi/rW2xnLyXV3w/hqdefault.jpg", "is_primary": True},
+    ],
+    "Nyama Choma": [
+        {"url": "https://www.youtube.com/watch?v=P5eGWFCjReA", "source_type": "youtube", "title": "Nyama Choma, Kenyan BBQ goat - Easy n Delicious", "thumbnail_url": "https://i.ytimg.com/vi/P5eGWFCjReA/hqdefault.jpg", "is_primary": True},
+    ],
+    "Pilau": [
+        {"url": "https://www.youtube.com/watch?v=c2R79_0r-do", "source_type": "youtube", "title": "Kenyan Pilau, step by step - Annas Kitchen KE", "thumbnail_url": "https://i.ytimg.com/vi/c2R79_0r-do/hqdefault.jpg", "is_primary": True},
+    ],
+    "Chapati": [
+        {"url": "https://www.youtube.com/watch?v=UvgVw732ASg", "source_type": "youtube", "title": "Soft layered Kenyan Chapati - Asedos Kitchen", "thumbnail_url": "https://i.ytimg.com/vi/UvgVw732ASg/hqdefault.jpg", "is_primary": True},
+    ],
+    "Mandazi": [
+        {"url": "https://www.youtube.com/watch?v=OSyT7S6fB4A", "source_type": "youtube", "title": "Mandazi (Mahamri) - Chef Lolas Kitchen", "thumbnail_url": "https://i.ytimg.com/vi/OSyT7S6fB4A/hqdefault.jpg", "is_primary": True},
+    ],
+    "Sukuma Wiki": [
+        {"url": "https://www.youtube.com/watch?v=MTNo4H6fPuw", "source_type": "youtube", "title": "Sukuma Wiki collard greens - Infoods", "thumbnail_url": "https://i.ytimg.com/vi/MTNo4H6fPuw/hqdefault.jpg", "is_primary": True},
+    ],
+    "Githeri": [
+        {"url": "https://www.youtube.com/watch?v=asMXjd5ePys", "source_type": "youtube", "title": "Kenyan Githeri (maize & beans) - Jikoni", "thumbnail_url": "https://i.ytimg.com/vi/asMXjd5ePys/hqdefault.jpg", "is_primary": True},
+    ],
+    "Matoke": [
+        {"url": "https://www.youtube.com/watch?v=sBpXlLxmq_8", "source_type": "youtube", "title": "Matoke, plantains with beans - Easy n Delicious", "thumbnail_url": "https://i.ytimg.com/vi/sBpXlLxmq_8/hqdefault.jpg", "is_primary": True},
+    ],
+    "Luwombo": [
+        {"url": "https://www.youtube.com/watch?v=ni5icnmCZFg", "source_type": "youtube", "title": "Chicken Luwombo in banana leaves - The Cooking Nurse", "thumbnail_url": "https://i.ytimg.com/vi/ni5icnmCZFg/hqdefault.jpg", "is_primary": True},
+    ],
+    "Couscous": [
+        {"url": "https://www.youtube.com/watch?v=GfNRbVquluA", "source_type": "youtube", "title": "Couscous with seven vegetables - CookingWithAlia", "thumbnail_url": "https://i.ytimg.com/vi/GfNRbVquluA/hqdefault.jpg", "is_primary": True},
+    ],
+    "Lamb Tagine": [
+        {"url": "https://www.youtube.com/watch?v=v9C6gtpNiFY", "source_type": "youtube", "title": "Traditional Moroccan Lamb Tagine - Chef Kevin Ashton", "thumbnail_url": "https://i.ytimg.com/vi/v9C6gtpNiFY/hqdefault.jpg", "is_primary": True},
+    ],
+    "Chicken Tagine": [
+        {"url": "https://www.youtube.com/watch?v=TpsUQ7SbTXs", "source_type": "youtube", "title": "Chicken Tagine Mchermel - CookingWithAlia", "thumbnail_url": "https://i.ytimg.com/vi/TpsUQ7SbTXs/hqdefault.jpg", "is_primary": True},
+    ],
+    "Harira": [
+        {"url": "https://www.youtube.com/watch?v=l5YO90dI5Jc", "source_type": "youtube", "title": "Moroccan Harira soup - Dimitras Dishes", "thumbnail_url": "https://i.ytimg.com/vi/l5YO90dI5Jc/hqdefault.jpg", "is_primary": True},
+    ],
+    "Shakshuka": [
+        {"url": "https://www.youtube.com/watch?v=aqnk723WSp4", "source_type": "youtube", "title": "Authentic Tunisian Shakshuka - Cook around the World", "thumbnail_url": "https://i.ytimg.com/vi/aqnk723WSp4/hqdefault.jpg", "is_primary": True},
+    ],
+    "Msemen": [
+        {"url": "https://www.youtube.com/watch?v=t50V0P76IwE", "source_type": "youtube", "title": "Msemen Moroccan pancake - CookingWithAlia", "thumbnail_url": "https://i.ytimg.com/vi/t50V0P76IwE/hqdefault.jpg", "is_primary": True},
+    ],
+    "Brik": [
+        {"url": "https://www.youtube.com/watch?v=OV9EgaE80O8", "source_type": "youtube", "title": "Tunisian Brik pastry - Tunisian Cuisine in English", "thumbnail_url": "https://i.ytimg.com/vi/OV9EgaE80O8/hqdefault.jpg", "is_primary": True},
+    ],
+    "Mechoui": [
+        {"url": "https://www.youtube.com/watch?v=PC4__Tw66sc", "source_type": "youtube", "title": "Lamb Mechoui - Hanne Cuisine", "thumbnail_url": "https://i.ytimg.com/vi/PC4__Tw66sc/hqdefault.jpg", "is_primary": True},
+    ],
+    "Bobotie": [
+        {"url": "https://www.youtube.com/watch?v=nEMLgtRnwsg", "source_type": "youtube", "title": "South African Bobotie - The Cooking Foodie", "thumbnail_url": "https://i.ytimg.com/vi/nEMLgtRnwsg/hqdefault.jpg", "is_primary": True},
+    ],
+    "Bunny Chow": [
+        {"url": "https://www.youtube.com/watch?v=Bjrh8BmI22k", "source_type": "youtube", "title": "South African Bunny Chow - Infoods", "thumbnail_url": "https://i.ytimg.com/vi/Bjrh8BmI22k/hqdefault.jpg", "is_primary": True},
+    ],
+    "Chakalaka": [
+        {"url": "https://www.youtube.com/watch?v=U4driexsnt4", "source_type": "youtube", "title": "South African Chakalaka relish - Wolkberg Artisans", "thumbnail_url": "https://i.ytimg.com/vi/U4driexsnt4/hqdefault.jpg", "is_primary": True},
+    ],
+    "Pap and Wors": [
+        {"url": "https://www.youtube.com/watch?v=TFMI69JfEyk", "source_type": "youtube", "title": "Pap en Wors - The Frozen Fig", "thumbnail_url": "https://i.ytimg.com/vi/TFMI69JfEyk/hqdefault.jpg", "is_primary": True},
+    ],
+    "Biltong": [
+        {"url": "https://www.youtube.com/watch?v=_JBA8p4QG7k", "source_type": "youtube", "title": "South African Biltong - Wolkberg Artisans", "thumbnail_url": "https://i.ytimg.com/vi/_JBA8p4QG7k/hqdefault.jpg", "is_primary": True},
+    ],
+    "Sadza": [
+        {"url": "https://www.youtube.com/watch?v=GpmM7cVyvq8", "source_type": "youtube", "title": "Sadza ne Nyama - Daily Dime Dinners", "thumbnail_url": "https://i.ytimg.com/vi/GpmM7cVyvq8/hqdefault.jpg", "is_primary": True},
+    ],
+    "Saka-Saka": [
+        {"url": "https://www.youtube.com/watch?v=CJSs3Op2iu0", "source_type": "youtube", "title": "Pondu / Saka-Saka cassava leaves - Cook with Nahima", "thumbnail_url": "https://i.ytimg.com/vi/CJSs3Op2iu0/hqdefault.jpg", "is_primary": True},
+    ],
+    "Poulet Moambe": [
+        {"url": "https://www.youtube.com/watch?v=lf1C3-qXQfg", "source_type": "youtube", "title": "Poulet Moambe - EatThisNY", "thumbnail_url": "https://i.ytimg.com/vi/lf1C3-qXQfg/hqdefault.jpg", "is_primary": True},
+    ],
+    "Chikwangue": [
+        {"url": "https://www.youtube.com/watch?v=6aYU6QS3G2E", "source_type": "youtube", "title": "Chikwangue (cassava) at home - Muyakas Kitchen", "thumbnail_url": "https://i.ytimg.com/vi/6aYU6QS3G2E/hqdefault.jpg", "is_primary": True},
+    ],
+    "Ndole": [
+        {"url": "https://www.youtube.com/watch?v=Lw1URtejchc", "source_type": "youtube", "title": "Authentic Cameroonian Ndole - Cooking with baby d", "thumbnail_url": "https://i.ytimg.com/vi/Lw1URtejchc/hqdefault.jpg", "is_primary": True},
+    ],
+    "Jerk Chicken": [
+        {"url": "https://www.youtube.com/watch?v=TAkloIC_DPQ", "source_type": "youtube", "title": "Authentic Jamaican Jerk Chicken - Racquels Caribbean Cuisine", "thumbnail_url": "https://i.ytimg.com/vi/TAkloIC_DPQ/hqdefault.jpg", "is_primary": True},
     ],
 }
 
