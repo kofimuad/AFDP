@@ -89,6 +89,20 @@ async def test_ingredient_stores_falls_back_when_none_in_radius(client) -> None:
 
 
 @pytest.mark.asyncio
+async def test_food_restaurants_expose_delivery_flag(client) -> None:
+    response = await client.get("/api/v1/foods/jollof-rice")
+
+    assert response.status_code == 200
+    restaurants = response.json()["restaurants"]
+    assert len(restaurants) >= 1
+    # Tri-state: True (delivers), False (no delivery), None (unknown — never guessed).
+    for vendor in restaurants:
+        assert vendor["delivery_available"] in (True, False, None)
+    # At least one seeded restaurant is known to deliver, so the badge has data.
+    assert any(vendor["delivery_available"] is True for vendor in restaurants)
+
+
+@pytest.mark.asyncio
 async def test_ingredient_stores_unknown_food_404(client) -> None:
     response = await client.get(
         "/api/v1/foods/not-a-real-dish/ingredient-stores",

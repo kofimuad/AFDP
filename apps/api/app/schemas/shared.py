@@ -61,6 +61,8 @@ class VendorSummary(BaseModel):
     image_url: str | None = None
     is_verified: bool = False
     is_featured: bool = False
+    # Tri-state: True (delivers), False (verified no delivery), None (unknown).
+    delivery_available: bool | None = None
     created_at: datetime | None = None
     distance_km: float | None = Field(default=None)
 

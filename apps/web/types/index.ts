@@ -33,6 +33,8 @@ export interface VendorSummary {
   image_url: string | null;
   is_verified: boolean;
   is_featured: boolean;
+  /** true = delivers, false = no delivery, null = unknown (not verified). */
+  delivery_available: boolean | null;
   created_at: string | null;
   distance_km: number | null;
 }

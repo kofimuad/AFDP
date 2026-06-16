@@ -59,6 +59,9 @@ INGREDIENTS = [
     "Teff flour",
 ]
 
+# "delivery" demonstrates the tri-state: True (delivers), False (verified no
+# delivery), None (unknown — not yet verified). Stores carry it too, not just
+# restaurants.
 VENDORS = [
     {
         "name": "Lagos Grill Silver Spring",
@@ -66,6 +69,7 @@ VENDORS = [
         "address": "8455 Colesville Rd, Silver Spring, MD",
         "lat": 38.9957,
         "lng": -77.0282,
+        "delivery": True,
     },
     {
         "name": "Suya Spot DC",
@@ -73,6 +77,7 @@ VENDORS = [
         "address": "1911 9th St NW, Washington, DC",
         "lat": 38.9168,
         "lng": -77.0233,
+        "delivery": True,
     },
     {
         "name": "Addis Corner Arlington",
@@ -80,6 +85,7 @@ VENDORS = [
         "address": "3100 Columbia Pike, Arlington, VA",
         "lat": 38.8630,
         "lng": -77.0874,
+        "delivery": None,  # unknown
     },
     {
         "name": "Motherland Grocery Hyattsville",
@@ -87,6 +93,7 @@ VENDORS = [
         "address": "5400 Queens Chapel Rd, Hyattsville, MD",
         "lat": 38.9559,
         "lng": -76.9425,
+        "delivery": True,
     },
     {
         "name": "Nile Market Alexandria",
@@ -94,6 +101,7 @@ VENDORS = [
         "address": "6224 Richmond Hwy, Alexandria, VA",
         "lat": 38.7893,
         "lng": -77.0820,
+        "delivery": False,  # verified: no delivery
     },
 ]
 
@@ -235,17 +243,18 @@ async def seed() -> None:
             vendor_id = await conn.fetchval(
                 """
                 INSERT INTO vendors (
-                    id, name, slug, type, address, location, is_verified, is_featured
+                    id, name, slug, type, address, location, is_verified, is_featured, delivery_available
                 ) VALUES (
                     gen_random_uuid(), $1, $2, $3, $4,
                     ST_SetSRID(ST_MakePoint($5, $6), 4326),
-                    true, false
+                    true, false, $7
                 )
                 ON CONFLICT (slug) DO UPDATE SET
                     name = EXCLUDED.name,
                     type = EXCLUDED.type,
                     address = EXCLUDED.address,
-                    location = EXCLUDED.location
+                    location = EXCLUDED.location,
+                    delivery_available = EXCLUDED.delivery_available
                 RETURNING id;
                 """,
                 vendor["name"],
@@ -254,6 +263,7 @@ async def seed() -> None:
                 vendor["address"],
                 vendor["lng"],
                 vendor["lat"],
+                vendor.get("delivery"),
             )
             vendor_ids[vendor["name"]] = str(vendor_id)
 

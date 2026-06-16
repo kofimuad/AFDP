@@ -53,6 +53,7 @@ async def get_saved_collection(user_id: UUID) -> dict[str, Any]:
             v.image_url,
             v.is_verified,
             v.is_featured,
+            v.delivery_available,
             v.created_at
         FROM saved_items s
         JOIN vendors v ON v.id = s.vendor_id

@@ -23,6 +23,7 @@ import {
   adminListUsers,
   adminListVendors,
   adminSetUserActive,
+  adminSetVendorDelivery,
   adminToggleVendorFeature,
   adminUpdateUserRole,
   adminUpdateVendorPlan,
@@ -523,6 +524,20 @@ function VendorsTab({ showToast }: { showToast: (msg: string, type?: "success" |
                         {v.is_verified ? <Badge variant="success">Verified</Badge> : <Badge variant="warning">Pending</Badge>}
                         {v.is_featured && <Badge variant="featured" />}
                       </div>
+                      {/* Delivery override (true / false / unknown) */}
+                      <select
+                        value={v.delivery_available === true ? "yes" : v.delivery_available === false ? "no" : "unknown"}
+                        onChange={(e) => {
+                          const val = e.target.value === "yes" ? true : e.target.value === "no" ? false : null;
+                          act(v.id, () => adminSetVendorDelivery(v.id, val), "Delivery updated");
+                        }}
+                        title="Delivery availability"
+                        className="mt-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
+                      >
+                        <option value="unknown">🛵 Delivery: unknown</option>
+                        <option value="yes">🛵 Delivers</option>
+                        <option value="no">🛵 No delivery</option>
+                      </select>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">

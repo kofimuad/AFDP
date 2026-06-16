@@ -38,6 +38,7 @@ async def fetch_vendors_within_radius(
             v.image_url,
             v.is_verified,
             v.is_featured,
+            v.delivery_available,
             v.created_at,
             ROUND((ST_Distance(v.location::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) / 1000)::numeric, 2) AS distance_km
         FROM vendors v
