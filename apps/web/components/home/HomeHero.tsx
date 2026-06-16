@@ -3,7 +3,7 @@
 import { ArrowRight, ChefHat, Loader2, MapPin, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { useToast } from "@/lib/store/toastStore";
@@ -18,9 +18,21 @@ const SUGGESTIONS: ReadonlyArray<{ label: string; q: string }> = [
   { label: "Pepper Soup", q: "pepper-soup" }
 ];
 
-// Woman cooking over an open fire — warm, on-palette, active cooking scene.
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1550346948-b4d527a4c069?w=2400&q=85&auto=format&fit=crop";
+// Hero imagery — African home cooking. Desktop is a single landscape photo (the
+// couple); mobile crossfades through portrait shots. Files live in
+// apps/web/public/hero/ (see the README there).
+const HERO_DESKTOP_IMAGE = "/hero/hero-1.jpg";
+interface MobileSlide {
+  src: string;
+  /** background-position; lower % lifts the subject higher in frame. */
+  position: string;
+  alt: string;
+}
+const HERO_MOBILE_SLIDES: ReadonlyArray<MobileSlide> = [
+  { src: "/hero/hero-1-mobile.jpg", position: "center 12%", alt: "A woman cooking in her kitchen" },
+  { src: "/hero/hero-2-mobile.jpg", position: "center 25%", alt: "A smiling chef mixing batter" }
+];
+const SLIDE_INTERVAL_MS = 6000;
 
 const COPY: Record<Mode, { placeholder: string; cta: string }> = {
   cook: {
@@ -39,6 +51,19 @@ export function HomeHero() {
   const [mode, setMode] = useState<Mode>("cook");
   const [query, setQuery] = useState("");
   const [locating, setLocating] = useState(false);
+  const [slide, setSlide] = useState(0);
+
+  // Auto-advance the mobile slideshow, unless the user prefers reduced motion.
+  useEffect(() => {
+    if (HERO_MOBILE_SLIDES.length < 2) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    const id = setInterval(
+      () => setSlide((i) => (i + 1) % HERO_MOBILE_SLIDES.length),
+      SLIDE_INTERVAL_MS
+    );
+    return () => clearInterval(id);
+  }, []);
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,27 +96,43 @@ export function HomeHero() {
 
   return (
     <section
-      className="relative flex min-h-[calc(100svh-8rem)] items-center justify-center overflow-hidden px-6 py-20 md:min-h-[calc(100svh-4rem)]"
+      className="relative flex min-h-[calc(100svh-8rem)] items-end justify-center overflow-hidden px-6 pb-14 pt-24 md:min-h-[calc(100svh-4rem)] md:pb-20 md:pt-28"
       aria-label="Hero"
     >
-      {/* Background photo */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundColor: "#1A0F08",
-          backgroundImage: `linear-gradient(160deg,rgba(26,15,8,.35) 0%,rgba(45,21,8,.25) 40%,rgba(24,14,5,.45) 100%),url('${HERO_IMAGE}')`,
-          backgroundSize: "cover",
-          backgroundPosition: "center"
-        }}
-        aria-hidden="true"
-      />
-      {/* Darkening overlay for text legibility */}
+      {/* Background imagery */}
+      <div className="absolute inset-0 bg-[#1A0F08]" aria-hidden="true">
+        {/* Desktop — single static photo of the couple, biased up so faces clear the text */}
+        <div
+          className="absolute inset-0 hidden md:block"
+          style={{
+            backgroundImage: `url('${HERO_DESKTOP_IMAGE}')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center 30%"
+          }}
+        />
+        {/* Mobile — crossfading portrait slideshow */}
+        <div className="absolute inset-0 md:hidden">
+          {HERO_MOBILE_SLIDES.map((s, i) => (
+            <div
+              key={s.src}
+              className="absolute inset-0 transition-opacity duration-[1200ms] ease-in-out motion-reduce:transition-none"
+              style={{
+                opacity: i === slide ? 1 : 0,
+                backgroundImage: `url('${s.src}')`,
+                backgroundSize: "cover",
+                backgroundPosition: s.position
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      {/* Bottom-weighted scrim: keeps the faces (upper) visible while darkening
+          the lower area where the text sits, for legibility. */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 90% 70% at 50% 55%,rgba(0,0,0,.15) 0%,rgba(0,0,0,.55) 70%,rgba(0,0,0,.75) 100%)," +
-            "linear-gradient(180deg,rgba(0,0,0,.45) 0%,rgba(0,0,0,.25) 35%,rgba(0,0,0,.65) 100%)"
+            "linear-gradient(180deg,rgba(0,0,0,.34) 0%,rgba(0,0,0,.12) 26%,rgba(0,0,0,.30) 52%,rgba(0,0,0,.62) 74%,rgba(0,0,0,.86) 100%)"
         }}
         aria-hidden="true"
       />
@@ -108,12 +149,15 @@ export function HomeHero() {
           <span className="text-[var(--color-primary)]">right in your kitchen.</span>
         </h1>
 
-        <p className="mx-auto mt-4 max-w-md text-base text-white/75 sm:mt-5 sm:text-lg">
-          Get the recipe, shopping list, and where to buy it all nearby.
+        <p className="mx-auto mt-3 max-w-md text-base text-white/80 sm:mt-5 sm:text-lg">
+          <span className="sm:hidden">Recipes, shopping lists & stores nearby.</span>
+          <span className="hidden sm:inline">
+            Get the recipe, shopping list, and where to buy it all nearby.
+          </span>
         </p>
 
         {/* Mode toggle — Cook is the headline path */}
-        <div className="mx-auto mt-8 inline-flex rounded-full border border-white/20 bg-black/25 p-1 backdrop-blur-sm">
+        <div className="mx-auto mt-5 inline-flex rounded-full border border-white/20 bg-black/25 p-1 backdrop-blur-sm sm:mt-8">
           <button
             type="button"
             onClick={() => setMode("cook")}
@@ -185,8 +229,8 @@ export function HomeHero() {
           </div>
         )}
 
-        {/* Suggestions */}
-        <p className="mt-6 text-sm text-white/50">
+        {/* Suggestions — hidden on mobile to keep the hero short */}
+        <p className="mt-6 hidden text-sm text-white/50 sm:block">
           <span className="font-medium text-white/75">
             {mode === "cook" ? "Cook tonight:" : "Try:"}
           </span>{" "}
@@ -203,6 +247,25 @@ export function HomeHero() {
           ))}
         </p>
       </div>
+
+      {/* Slide indicators — mobile only (desktop is a single image) */}
+      {HERO_MOBILE_SLIDES.length > 1 && (
+        <div className="absolute inset-x-0 bottom-6 z-20 flex justify-center gap-2.5 md:hidden">
+          {HERO_MOBILE_SLIDES.map((s, i) => (
+            <button
+              key={s.src}
+              type="button"
+              onClick={() => setSlide(i)}
+              aria-label={`Show slide ${i + 1}: ${s.alt}`}
+              aria-current={i === slide}
+              className={cn(
+                "h-2 rounded-full transition-all duration-300",
+                i === slide ? "w-7 bg-white" : "w-2 bg-white/45 hover:bg-white/70"
+              )}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

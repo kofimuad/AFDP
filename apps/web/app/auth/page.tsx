@@ -212,10 +212,10 @@ export default function AuthPage() {
         className="relative hidden flex-col items-center justify-center overflow-hidden p-12 lg:flex lg:flex-1"
         style={{
           backgroundImage:
-            "linear-gradient(180deg,rgba(15,10,5,.55) 0%,rgba(15,10,5,.35) 40%,rgba(15,10,5,.75) 100%)," +
-            "url('https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?w=1600&q=85&auto=format&fit=crop')",
+            "linear-gradient(180deg,rgba(15,10,5,.50) 0%,rgba(15,10,5,.30) 40%,rgba(15,10,5,.78) 100%)," +
+            "url('/hero/hero-2.jpg')",
           backgroundSize: "cover",
-          backgroundPosition: "center",
+          backgroundPosition: "center 22%",
           backgroundColor: "#1A0F08",
         }}
       >
@@ -232,8 +232,11 @@ export default function AuthPage() {
         <div className="relative z-10 flex flex-col items-center text-center">
           <Logo variant="light" className="mb-6 scale-125" />
 
-          <p className="mt-2 max-w-xs text-lg leading-relaxed text-white/80">
-            "Discover the flavors of Africa, near you."
+          <h2 className="display-font mt-4 text-3xl font-extrabold tracking-tight text-white">
+            Cook it yourself.
+          </h2>
+          <p className="mt-3 max-w-xs text-base leading-relaxed text-white/80">
+            Get the recipe, gather the ingredients nearby, and make any African dish at home.
           </p>
 
           <div className="mt-8 flex flex-wrap justify-center gap-2">
