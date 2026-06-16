@@ -320,6 +320,48 @@ export async function getFood(slug: string, lat?: number, lng?: number): Promise
   return data;
 }
 
+// --- SHOPPING LIST ---
+
+export async function addRecipeToShoppingList(slug: string): Promise<import("@/types").AddRecipeResult> {
+  const { data } = await api.post<import("@/types").AddRecipeResult>(`/shopping-list/recipes/${slug}`);
+  return data;
+}
+
+export async function getShoppingList(): Promise<import("@/types").ShoppingList> {
+  const { data } = await api.get<import("@/types").ShoppingList>("/shopping-list");
+  return data;
+}
+
+export async function setShoppingItemChecked(
+  itemId: string,
+  checked: boolean
+): Promise<import("@/types").ShoppingListItem> {
+  const { data } = await api.patch<import("@/types").ShoppingListItem>(
+    `/shopping-list/items/${itemId}`,
+    { checked }
+  );
+  return data;
+}
+
+export async function removeShoppingItem(itemId: string): Promise<void> {
+  await api.delete(`/shopping-list/items/${itemId}`);
+}
+
+export async function clearShoppingList(): Promise<void> {
+  await api.delete("/shopping-list");
+}
+
+export async function getShoppingListStores(
+  lat: number,
+  lng: number,
+  radiusKm?: number
+): Promise<import("@/types").StoreCoverage[]> {
+  const { data } = await api.get<import("@/types").StoreCoverage[]>("/shopping-list/stores", {
+    params: { lat, lng, radius_km: radiusKm }
+  });
+  return data;
+}
+
 export async function getFoodIngredientStores(
   slug: string,
   lat: number,

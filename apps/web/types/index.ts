@@ -87,6 +87,35 @@ export interface IngredientStores {
   fallback_stores: VendorSummary[];
 }
 
+export interface ShoppingListItem {
+  id: string;
+  ingredient: IngredientSummary;
+  quantity_note: string | null;
+  checked: boolean;
+  source_food_name: string | null;
+  source_food_slug: string | null;
+}
+
+export interface ShoppingList {
+  items: ShoppingListItem[];
+  total: number;
+  checked_count: number;
+}
+
+export interface AddRecipeResult {
+  food_slug: string;
+  food_name: string;
+  added: number;
+  total: number;
+}
+
+export interface StoreCoverage {
+  store: VendorSummary;
+  items_covered: number;
+  total_items: number;
+  covered_ingredient_ids: string[];
+}
+
 export interface IngredientDetail extends IngredientSummary {
   stores: VendorSummary[];
 }
