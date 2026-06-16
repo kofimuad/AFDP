@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChefHat, LayoutDashboard, LogOut, Search, User } from "lucide-react";
+import { ChefHat, LayoutDashboard, LogOut, Search, ShoppingBasket, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -174,6 +174,14 @@ export function NavBar() {
                         >
                           <User size={16} />
                           My Profile
+                        </Link>
+                        <Link
+                          href="/shopping-list"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]"
+                        >
+                          <ShoppingBasket size={16} />
+                          Shopping list
                         </Link>
                         {(isVendor || isAdmin) && (
                           <Link

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Accordion, AccordionItem } from "@/components/ui/Accordion";
 import { ResultCard } from "@/components/search/ResultCard";
 import { SaveDishButton } from "@/components/food/SaveDishButton";
+import { AddToShoppingListButton } from "@/components/food/AddToShoppingListButton.client";
 import { RecipeLinks } from "@/components/food/RecipeLinks";
 import { IngredientStoreFinder } from "@/components/food/IngredientStoreFinder.client";
 import { FoodDetailMap } from "@/components/food/FoodDetailMap.client";
@@ -205,8 +206,9 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
             <IngredientStoreFinder slug={food.slug} ingredients={food.ingredients} />
           )}
 
-          {/* Save for later */}
+          {/* Save + add to shopping list */}
           <div className="flex flex-wrap items-center gap-3 pt-1">
+            {food.ingredients.length > 0 && <AddToShoppingListButton slug={food.slug} />}
             <SaveDishButton
               food={{ slug: food.slug, name: food.name, description: food.description, image_url: food.image_url }}
             />
