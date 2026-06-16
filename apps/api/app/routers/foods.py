@@ -3,10 +3,10 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
 from app.schemas.error import ErrorResponse
-from app.schemas.food import FoodDetailOut, FoodOut
+from app.schemas.food import FoodDetailOut, FoodOut, IngredientStoresOut
 from app.services.analytics_service import log_view_event
 from app.services.auth_service import get_optional_user
-from app.services.food_service import get_food_detail, list_foods
+from app.services.food_service import find_ingredient_stores_for_food, get_food_detail, list_foods
 
 router = APIRouter(prefix="/foods", tags=["Foods"])
 
@@ -95,3 +95,22 @@ async def get_food_route(
         user_id=current_user["id"] if current_user else None,
     )
     return FoodDetailOut.model_validate(payload)
+
+
+@router.get(
+    "/{slug}/ingredient-stores",
+    response_model=list[IngredientStoresOut],
+    responses={
+        404: {"model": ErrorResponse, "content": {"application/json": {"example": {"error": "not_found", "detail": "Food not found"}}}},
+    },
+)
+async def food_ingredient_stores_route(
+    slug: str,
+    lat: float = Query(..., description="User latitude"),
+    lng: float = Query(..., description="User longitude"),
+    radius_km: float = Query(10, gt=0, le=500, description="Search radius in km"),
+) -> list[IngredientStoresOut]:
+    """Per-ingredient nearby grocery stores for a dish's shopping list."""
+
+    rows = await find_ingredient_stores_for_food(slug=slug, lat=lat, lng=lng, radius_km=radius_km)
+    return [IngredientStoresOut.model_validate(row) for row in rows]

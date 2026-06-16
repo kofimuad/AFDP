@@ -320,6 +320,19 @@ export async function getFood(slug: string, lat?: number, lng?: number): Promise
   return data;
 }
 
+export async function getFoodIngredientStores(
+  slug: string,
+  lat: number,
+  lng: number,
+  radiusKm?: number
+): Promise<import("@/types").IngredientStores[]> {
+  const { data } = await api.get<import("@/types").IngredientStores[]>(
+    `/foods/${slug}/ingredient-stores`,
+    { params: { lat, lng, radius_km: radiusKm } }
+  );
+  return data;
+}
+
 export async function getIngredient(slug: string, lat?: number, lng?: number): Promise<IngredientDetail> {
   const { data } = await api.get<IngredientDetail>(`/ingredients/${slug}`, { params: { lat, lng } });
   return data;

@@ -6,8 +6,14 @@ from uuid import UUID
 from fastapi import HTTPException
 
 from app.core.database import fetch, fetchrow
+from app.services.geo_service import fetch_vendors_within_radius
 from app.services.vendor_service import _dedupe_vendors, _row_to_vendor_summary
 from app.services.query_utils import bind_param
+
+# When no store within the requested radius stocks an ingredient, widen to a
+# global radius and return the few nearest as a "closest alternative" fallback.
+_INGREDIENT_FALLBACK_RADIUS_KM = 20_000.0
+_INGREDIENT_FALLBACK_LIMIT = 3
 
 
 def _row_to_food_summary(row: dict[str, Any]) -> dict[str, Any]:
@@ -166,6 +172,71 @@ async def get_food_detail(slug: str, lat: float | None = None, lng: float | None
         "stores": stores,
         "recipe_links": [dict(row) for row in recipe_links],
     }
+
+
+async def find_ingredient_stores_for_food(
+    slug: str, lat: float, lng: float, radius_km: float
+) -> list[dict[str, Any]]:
+    """For each ingredient of a dish, return nearby grocery stores that stock it.
+
+    Stores within ``radius_km`` of the user are returned per ingredient. When an
+    ingredient has none in range, up to a few nearest stores worldwide are
+    returned as ``fallback_stores`` (the "closest alternative"), so the user sees
+    the nearest option rather than a dead end.
+    """
+
+    food = await fetchrow("SELECT id FROM foods WHERE slug = $1;", slug)
+    if not food:
+        raise HTTPException(status_code=404, detail="Food not found")
+
+    ingredients = await fetch(
+        """
+        SELECT i.id, i.name, i.slug, i.image_url, fi.quantity_note
+        FROM food_ingredients fi
+        JOIN ingredients i ON i.id = fi.ingredient_id
+        WHERE fi.food_id = $1
+        ORDER BY i.name ASC;
+        """,
+        food["id"],
+    )
+
+    # $1/$2/$3 are lng/lat/radius (bound by the geo helper); $4 is the ingredient.
+    base_where = (
+        "v.type = 'grocery_store' "
+        "AND v.id IN (SELECT vi.vendor_id FROM vendor_items vi WHERE vi.ingredient_id = $4)"
+    )
+
+    results: list[dict[str, Any]] = []
+    for row in ingredients:
+        ingredient_id = row["id"]
+        within = await fetch_vendors_within_radius(base_where, (ingredient_id,), lat, lng, radius_km)
+        fallback: list[dict[str, Any]] = []
+        if not within:
+            fallback = await fetch_vendors_within_radius(
+                base_where,
+                (ingredient_id,),
+                lat,
+                lng,
+                _INGREDIENT_FALLBACK_RADIUS_KM,
+                limit=_INGREDIENT_FALLBACK_LIMIT,
+            )
+        results.append(
+            {
+                "ingredient": {
+                    "id": row["id"],
+                    "name": row["name"],
+                    "slug": row["slug"],
+                    "image_url": row.get("image_url"),
+                },
+                "quantity_note": row.get("quantity_note"),
+                "available_nearby": len(within) > 0,
+                "stores": [_row_to_vendor_summary(r) for r in _dedupe_vendors([dict(x) for x in within])],
+                "fallback_stores": [
+                    _row_to_vendor_summary(r) for r in _dedupe_vendors([dict(x) for x in fallback])
+                ],
+            }
+        )
+    return results
 
 
 async def _fetch_vendors_for_food(

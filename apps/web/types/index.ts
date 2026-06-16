@@ -77,6 +77,14 @@ export interface FoodDetail extends FoodSummary {
   recipe_links: RecipeLink[];
 }
 
+export interface IngredientStores {
+  ingredient: IngredientSummary;
+  quantity_note: string | null;
+  available_nearby: boolean;
+  stores: VendorSummary[];
+  fallback_stores: VendorSummary[];
+}
+
 export interface IngredientDetail extends IngredientSummary {
   stores: VendorSummary[];
 }

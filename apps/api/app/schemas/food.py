@@ -19,5 +19,16 @@ class FoodDetailOut(FoodSummary):
     recipe_links: list[RecipeLinkOut] = Field(default_factory=list)
 
 
+class IngredientStoresOut(BaseModel):
+    """Per-ingredient nearby store availability for a dish's shopping list."""
+
+    ingredient: IngredientSummary
+    quantity_note: str | None = None
+    available_nearby: bool = False
+    stores: list[VendorSummary] = Field(default_factory=list)
+    # Nearest stores worldwide when none are within the requested radius.
+    fallback_stores: list[VendorSummary] = Field(default_factory=list)
+
+
 FoodOut = FoodSummary
 

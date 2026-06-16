@@ -1,12 +1,13 @@
 "use client";
 
-import { ChefHat, ChevronRight, Clock, Flame, MapPin, PlayCircle, ShoppingBasket, Store, Utensils } from "lucide-react";
+import { ChefHat, ChevronRight, Clock, Flame, PlayCircle, ShoppingBasket, Utensils } from "lucide-react";
 import Link from "next/link";
 
 import { Accordion, AccordionItem } from "@/components/ui/Accordion";
 import { ResultCard } from "@/components/search/ResultCard";
 import { SaveDishButton } from "@/components/food/SaveDishButton";
 import { RecipeLinks } from "@/components/food/RecipeLinks";
+import { IngredientStoreFinder } from "@/components/food/IngredientStoreFinder.client";
 import { FoodDetailMap } from "@/components/food/FoodDetailMap.client";
 import type { FoodDetail as FoodDetailType, FoodSummary, VendorSummary } from "@/types";
 
@@ -138,82 +139,16 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
             </div>
           )}
 
-          {/* Shopping list */}
+          {/* Shopping list — which nearby stores stock each ingredient */}
           {food.ingredients.length > 0 && (
-            <div>
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="display-font flex items-center gap-2 text-lg font-bold text-[var(--color-text-primary)]">
-                  <ShoppingBasket size={18} className="text-[var(--color-grocery)]" />
-                  Shopping list
-                </h3>
-                <span className="text-sm text-[var(--color-text-muted)]">
-                  {food.ingredients.length} {food.ingredients.length === 1 ? "ingredient" : "ingredients"}
-                </span>
-              </div>
-              <ul className="divide-y divide-[var(--color-border)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)]">
-                {food.ingredients.map((item) => (
-                  <li key={item.ingredient.id}>
-                    <Link
-                      href={`/search?q=${encodeURIComponent(item.ingredient.name)}`}
-                      className="group flex items-center gap-3 bg-[var(--color-surface)] px-4 py-3 transition hover:bg-[var(--color-surface-hover)]"
-                    >
-                      <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--color-grocery)]" aria-hidden="true" />
-                      <span className="flex-1 text-sm font-medium text-[var(--color-text-primary)]">
-                        {item.ingredient.name}
-                        {item.quantity_note ? (
-                          <span className="font-normal text-[var(--color-text-muted)]"> · {item.quantity_note}</span>
-                        ) : null}
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-primary)] opacity-0 transition group-hover:opacity-100">
-                        Find nearby
-                        <ChevronRight size={13} />
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <IngredientStoreFinder slug={food.slug} ingredients={food.ingredients} />
           )}
 
-          {/* Where to buy + primary CTA */}
-          <div className="space-y-4">
-            {food.stores.length > 0 ? (
-              <div>
-                <h3 className="mb-2 text-sm font-semibold text-[var(--color-text-primary)]">
-                  Stores that stock these ingredients
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {food.stores.map((store) => (
-                    <Link
-                      key={store.id}
-                      href={`/vendors/${store.slug}`}
-                      className="inline-flex items-center gap-2 rounded-full border-[1.5px] border-[var(--color-grocery-light)] bg-[var(--color-grocery-light)] px-4 py-2 text-sm font-medium text-[var(--color-grocery)] transition hover:border-[var(--color-grocery)]"
-                    >
-                      <Store size={14} />
-                      {store.name}
-                      {store.distance_km != null ? ` · ${store.distance_km.toFixed(1)} km` : ""}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-[var(--color-text-muted)]">
-                Tap any ingredient above to find nearby stores that sell it.
-              </p>
-            )}
-
-            <div className="flex flex-wrap items-center gap-3 pt-1">
-              <Link
-                href={findNearMeHref}
-                className="inline-flex items-center gap-2 rounded-full bg-[var(--color-primary)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)]"
-              >
-                <MapPin size={16} />
-                Find ingredients near me
-              </Link>
-              <SaveDishButton
-                food={{ slug: food.slug, name: food.name, description: food.description, image_url: food.image_url }}
-              />
-            </div>
+          {/* Save for later */}
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <SaveDishButton
+              food={{ slug: food.slug, name: food.name, description: food.description, image_url: food.image_url }}
+            />
           </div>
         </div>
       </section>
