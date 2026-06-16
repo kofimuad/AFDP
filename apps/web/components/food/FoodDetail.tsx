@@ -98,8 +98,69 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
         )}
       </div>
 
+      {/* ── Two clear paths: cook it yourself vs order nearby ── */}
+      <section aria-label="How to get this dish" className="grid gap-3 sm:grid-cols-2">
+        <a
+          href="#cook"
+          className="flex items-start gap-3 rounded-[var(--radius-lg)] border-[1.5px] border-[var(--color-primary)] bg-[var(--color-primary-light)] p-4 transition hover:shadow-[var(--shadow-md)]"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-white">
+            <ChefHat size={22} />
+          </span>
+          <span className="min-w-0">
+            <span className="display-font block text-base font-bold text-[var(--color-text-primary)]">
+              Cook it yourself
+            </span>
+            <span className="mt-0.5 block text-sm text-[var(--color-text-muted)]">
+              {food.ingredients.length > 0
+                ? `Recipe + ${food.ingredients.length} ingredients to buy nearby`
+                : "Recipe + ingredient sourcing"}
+            </span>
+          </span>
+        </a>
+
+        {food.restaurants.length > 0 ? (
+          <a
+            href="#order"
+            className="flex items-start gap-3 rounded-[var(--radius-lg)] border-[1.5px] border-[var(--color-border-strong)] bg-[var(--color-surface)] p-4 transition hover:border-[var(--color-text-primary)] hover:shadow-[var(--shadow-md)]"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-dark)] text-[var(--color-text-inverse)]">
+              <Utensils size={22} />
+            </span>
+            <span className="min-w-0">
+              <span className="display-font block text-base font-bold text-[var(--color-text-primary)]">
+                Order nearby
+              </span>
+              <span className="mt-0.5 block text-sm text-[var(--color-text-muted)]">
+                {food.restaurants.length}{" "}
+                {food.restaurants.length === 1 ? "restaurant serves" : "restaurants serve"} it
+                {food.restaurants.some((r) => r.delivery_available === true) ? " · some deliver" : ""}
+              </span>
+            </span>
+          </a>
+        ) : (
+          // Graceful steer: no nearby restaurant → point to cooking it yourself.
+          <a
+            href="#cook"
+            className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-hover)] p-4"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-surface)] text-[var(--color-text-muted)]">
+              <Utensils size={22} />
+            </span>
+            <span className="min-w-0">
+              <span className="display-font block text-base font-bold text-[var(--color-text-secondary)]">
+                No restaurants nearby
+              </span>
+              <span className="mt-0.5 block text-sm text-[var(--color-text-muted)]">
+                None serve {food.name} yet — cook it yourself instead.
+              </span>
+            </span>
+          </a>
+        )}
+      </section>
+
       {/* ════════ COOK IT YOURSELF — the headline section ════════ */}
-      <section className="overflow-hidden rounded-[var(--radius-lg)] border-[1.5px] border-[var(--color-primary-light)] bg-[var(--color-surface)] shadow-[var(--shadow-md)]">
+      <section id="cook" className="scroll-mt-24 overflow-hidden rounded-[var(--radius-lg)] border-[1.5px] border-[var(--color-primary-light)] bg-[var(--color-surface)] shadow-[var(--shadow-md)]">
         {/* Banner */}
         <div
           className="flex items-center gap-3 px-5 py-4 text-white md:px-7"
@@ -153,18 +214,18 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
         </div>
       </section>
 
-      {/* ── Order nearby (secondary) ── */}
-      <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 md:p-6">
+      {/* ── Order nearby ── */}
+      <section id="order" className="scroll-mt-24 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 md:p-6">
         <div className="mb-1 flex items-center gap-2">
           <Utensils size={18} className="text-[var(--color-text-muted)]" />
           <h2 className="display-font text-lg font-bold text-[var(--color-text-primary)]">
-            Not in the mood to cook?
+            Order nearby
           </h2>
         </div>
         <p className="mb-4 text-sm text-[var(--color-text-muted)]">
           {food.restaurants.length > 0
             ? `${food.restaurants.length} ${food.restaurants.length === 1 ? "restaurant serves" : "restaurants serve"} ${food.name} near you.`
-            : `No restaurants serving ${food.name} yet — be the first to add one.`}
+            : `Can't find ${food.name} nearby? It's easy to make at home.`}
         </p>
         {food.restaurants.length > 0 ? (
           <div className="space-y-3">
@@ -186,7 +247,19 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
             )}
           </div>
         ) : (
-          <EmptyHint label="No restaurants listed yet." />
+          // Graceful steer to the cook-it-yourself path.
+          <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border-strong)] px-4 py-6 text-center">
+            <p className="text-sm text-[var(--color-text-muted)]">
+              No nearby restaurant serves {food.name} right now.
+            </p>
+            <a
+              href="#cook"
+              className="mt-3 inline-flex items-center gap-2 rounded-full bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)]"
+            >
+              <ChefHat size={16} />
+              Cook it yourself instead
+            </a>
+          </div>
         )}
       </section>
 
@@ -289,14 +362,6 @@ function TimeStat({
       <p className="mt-1 text-lg font-extrabold text-[var(--color-text-primary)]">
         {minutes != null && minutes > 0 ? `${minutes} min` : "—"}
       </p>
-    </div>
-  );
-}
-
-function EmptyHint({ label }: { label: string }) {
-  return (
-    <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border-strong)] px-4 py-6 text-center text-sm text-[var(--color-text-muted)]">
-      {label}
     </div>
   );
 }

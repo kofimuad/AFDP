@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Navigation2 } from "lucide-react";
+import { ExternalLink, Loader2, Navigation2, Phone } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/Badge";
@@ -62,6 +62,7 @@ export function ResultCard({ vendor, active = false, onClick }: ResultCardProps)
           <p className="display-font text-lg text-[var(--color-text-primary)]">{vendor.name}</p>
           <div className="flex flex-wrap gap-2">
             <Badge variant={vendor.type === "grocery_store" ? "grocery" : "restaurant"} />
+            {vendor.delivery_available === true ? <Badge variant="success">🛵 Delivers</Badge> : null}
             {vendor.is_verified ? <Badge variant="verified" /> : null}
             {vendor.is_featured ? <Badge variant="featured" /> : null}
           </div>
@@ -74,15 +75,41 @@ export function ResultCard({ vendor, active = false, onClick }: ResultCardProps)
       </div>
       <p className="mt-3 text-sm text-[var(--color-text-muted)]">📍 {vendor.address}</p>
 
-      <button
-        type="button"
-        onClick={handleGetDirections}
-        disabled={isGettingLocation}
-        className="mt-2 flex cursor-pointer items-center gap-1 text-sm font-medium text-[var(--color-primary)] underline-offset-2 hover:text-[var(--color-primary-hover)] hover:underline disabled:cursor-not-allowed disabled:opacity-70"
-      >
-        {isGettingLocation ? <Loader2 size={14} className="animate-spin" /> : <Navigation2 size={14} />}
-        {isGettingLocation ? "Getting location..." : "Get Directions"}
-      </button>
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+        <button
+          type="button"
+          onClick={handleGetDirections}
+          disabled={isGettingLocation}
+          className="flex cursor-pointer items-center gap-1 text-sm font-medium text-[var(--color-primary)] underline-offset-2 hover:text-[var(--color-primary-hover)] hover:underline disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {isGettingLocation ? <Loader2 size={14} className="animate-spin" /> : <Navigation2 size={14} />}
+          {isGettingLocation ? "Getting location..." : "Get Directions"}
+        </button>
+
+        {/* Honest ordering options from data we actually have. */}
+        {vendor.website ? (
+          <a
+            href={vendor.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)] underline-offset-2 hover:underline"
+          >
+            <ExternalLink size={14} />
+            Order online
+          </a>
+        ) : null}
+        {vendor.phone ? (
+          <a
+            href={`tel:${vendor.phone}`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)] underline-offset-2 hover:underline"
+          >
+            <Phone size={14} />
+            Call to order
+          </a>
+        ) : null}
+      </div>
     </button>
   );
 }

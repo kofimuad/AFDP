@@ -178,6 +178,9 @@ function StoreChip({ store }: { store: VendorSummary }) {
       <Store size={12} />
       {store.name}
       {store.distance_km != null ? ` · ${store.distance_km.toFixed(1)} km` : ""}
+      {store.delivery_available === true ? (
+        <span title="Delivers" aria-label="Delivers">🛵</span>
+      ) : null}
     </Link>
   );
 }

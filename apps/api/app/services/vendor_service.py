@@ -28,6 +28,8 @@ def _row_to_vendor_summary(row: dict[str, Any]) -> dict[str, Any]:
         "image_url": row.get("image_url"),
         "is_verified": row.get("is_verified", False),
         "is_featured": row.get("is_featured", False),
+        # None = unknown (not verified); never defaulted to a false "no delivery".
+        "delivery_available": row.get("delivery_available"),
         "created_at": row.get("created_at"),
         "vendor_items": row.get("vendor_items", []),
     }
@@ -143,6 +145,7 @@ async def list_vendors(
             v.image_url,
             v.is_verified,
             v.is_featured,
+            v.delivery_available,
             v.created_at
             {distance_select}
         FROM vendors v
@@ -184,6 +187,7 @@ async def get_vendor_detail(slug: str, lat: float | None = None, lng: float | No
             v.image_url,
             v.is_verified,
             v.is_featured,
+            v.delivery_available,
             v.created_at
             {distance_select}
         FROM vendors v
@@ -741,6 +745,33 @@ async def toggle_vendor_feature(vendor_id: UUID) -> dict[str, Any]:
             phone, website, image_url, is_verified, is_featured, created_at;
         """,
         vendor_id,
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    return _row_to_vendor_summary(dict(row))
+
+
+async def set_vendor_delivery(vendor_id: UUID, delivery_available: bool | None) -> dict[str, Any]:
+    """Admin override of a vendor's delivery status.
+
+    Accepts the tri-state: True (delivers), False (verified no delivery), or
+    None (unknown / clear the override).
+    """
+
+    row = await fetchrow(
+        """
+        UPDATE vendors
+        SET delivery_available = $2
+        WHERE id = $1
+        RETURNING
+            id, name, slug, type, address,
+            ST_Y(location::geometry) AS lat,
+            ST_X(location::geometry) AS lng,
+            phone, website, image_url, is_verified, is_featured,
+            delivery_available, created_at;
+        """,
+        vendor_id,
+        delivery_available,
     )
     if not row:
         raise HTTPException(status_code=404, detail="Vendor not found")

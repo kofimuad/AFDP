@@ -466,6 +466,7 @@ export interface AdminVendor {
   image_url: string | null
   is_verified: boolean
   is_featured: boolean
+  delivery_available: boolean | null
   created_at: string | null
   plan: 'basic' | 'featured' | 'premium'
   plan_expires_at: string | null
@@ -498,6 +499,17 @@ export const adminVerifyVendor = async (vendorId: string) => {
 
 export const adminToggleVendorFeature = async (vendorId: string) => {
   const { data } = await api.patch(`/admin/manage/vendors/${vendorId}/feature`)
+  return data
+}
+
+export const adminSetVendorDelivery = async (
+  vendorId: string,
+  deliveryAvailable: boolean | null
+): Promise<AdminVendor> => {
+  const { data } = await api.patch<AdminVendor>(
+    `/admin/manage/vendors/${vendorId}/delivery`,
+    { delivery_available: deliveryAvailable }
+  )
   return data
 }
 

@@ -145,7 +145,7 @@ async def list_all_vendors(
             id, name, slug, type, address,
             ST_Y(location::geometry) AS lat,
             ST_X(location::geometry) AS lng,
-            phone, website, image_url, is_verified, is_featured, created_at,
+            phone, website, image_url, is_verified, is_featured, delivery_available, created_at,
             plan, plan_expires_at
         FROM vendors
         WHERE {where}
@@ -167,6 +167,7 @@ async def list_all_vendors(
             "image_url": r["image_url"],
             "is_verified": r["is_verified"],
             "is_featured": r["is_featured"],
+            "delivery_available": r["delivery_available"],
             "created_at": r["created_at"],
             "plan": r["plan"],
             "plan_expires_at": r["plan_expires_at"],

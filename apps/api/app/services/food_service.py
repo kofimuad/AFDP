@@ -281,6 +281,7 @@ async def _fetch_vendors_for_food(
             v.image_url,
             v.is_verified,
             v.is_featured,
+            v.delivery_available,
             v.created_at
             {distance_select}
         FROM vendors v

@@ -17,6 +17,7 @@ from app.services.admin_management_service import (
 from app.services.auth_service import require_admin
 from app.services.vendor_service import (
     delete_vendor,
+    set_vendor_delivery,
     toggle_vendor_feature,
     verify_vendor,
 )
@@ -34,6 +35,11 @@ class ActiveUpdate(BaseModel):
 
 class PlanUpdate(BaseModel):
     plan: str
+
+
+class DeliveryUpdate(BaseModel):
+    # Tri-state: true (delivers), false (no delivery), null (unknown).
+    delivery_available: bool | None = None
 
 
 @router.get("/users")
@@ -85,6 +91,16 @@ async def verify_vendor_route(vendor_id: UUID, _: dict = Depends(require_admin))
 @router.patch("/vendors/{vendor_id}/feature")
 async def feature_vendor_route(vendor_id: UUID, _: dict = Depends(require_admin)):
     return await toggle_vendor_feature(vendor_id)
+
+
+@router.patch("/vendors/{vendor_id}/delivery")
+async def set_vendor_delivery_route(
+    vendor_id: UUID,
+    payload: DeliveryUpdate,
+    _: dict = Depends(require_admin),
+):
+    """Admin override of a vendor's delivery status (true / false / null=unknown)."""
+    return await set_vendor_delivery(vendor_id, payload.delivery_available)
 
 
 @router.patch("/vendors/{vendor_id}/plan")

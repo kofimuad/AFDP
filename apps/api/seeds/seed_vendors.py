@@ -200,11 +200,11 @@ async def _seed_vendor(
         """
         INSERT INTO vendors (
             id, name, slug, type, address, location, phone, website,
-            image_url, is_verified, is_featured
+            image_url, is_verified, is_featured, delivery_available
         ) VALUES (
             gen_random_uuid(), $1, $2, $3, $4,
             ST_SetSRID(ST_MakePoint($5, $6), 4326),
-            $7, $8, $9, false, false
+            $7, $8, $9, false, false, $10
         )
         ON CONFLICT (slug) DO UPDATE SET
             name = EXCLUDED.name,
@@ -213,7 +213,8 @@ async def _seed_vendor(
             location = EXCLUDED.location,
             phone = COALESCE(EXCLUDED.phone, vendors.phone),
             website = COALESCE(EXCLUDED.website, vendors.website),
-            image_url = COALESCE(EXCLUDED.image_url, vendors.image_url)
+            image_url = COALESCE(EXCLUDED.image_url, vendors.image_url),
+            delivery_available = EXCLUDED.delivery_available
         RETURNING id;
         """,
         v["name"],
@@ -225,6 +226,9 @@ async def _seed_vendor(
         v.get("phone"),
         v.get("website"),
         v.get("image_url"),
+        # Delivery is UNKNOWN for sourced vendors — we don't fabricate it. It gets
+        # set later by vendor self-service or an admin override.
+        None,
     )
 
     cuisine = query_cuisine(v.get("search_term", ""))
