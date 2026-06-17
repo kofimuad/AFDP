@@ -27,7 +27,7 @@ async def find_best_food_match(q: str) -> dict[str, Any] | None:
     sql = """
         SELECT
             f.id, f.name, f.slug, f.description, f.image_url,
-            f.prep_minutes, f.cook_minutes, f.created_at,
+            f.prep_minutes, f.cook_minutes, f.servings, f.created_at,
             (
                 SELECT r.name FROM food_regions fr
                 JOIN regions r ON r.id = fr.region_id

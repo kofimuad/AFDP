@@ -699,6 +699,111 @@ FOOD_INGREDIENTS: dict[str, list[tuple[str, str]]] = {
 }
 
 
+# ── Servings (focused, high-quality set) ───────────────────────────────────
+# Only curated for flagship dishes; everything else stays NULL ("not curated").
+FOOD_SERVINGS: dict[str, int] = {
+    "Jollof Rice": 6,
+    "Egusi Soup": 6,
+    "Suya": 4,
+    "Moi Moi": 6,
+    "Akara": 4,
+    "Efo Riro": 4,
+    "Waakye": 4,
+    "Banku and Tilapia": 2,
+    "Kelewele": 4,
+    "Groundnut Soup": 4,
+}
+
+# ── Structured ingredient amounts (focused set) ────────────────────────────
+# food -> ingredient -> (quantity, unit). Layered on top of the free-text
+# quantity_note in FOOD_INGREDIENTS; (None, None) where an amount isn't numeric
+# ("to taste", "for frying"). Curated for the flagship Ghanaian/Nigerian dishes.
+STRUCTURED_QUANTITIES: dict[str, dict[str, tuple[float | None, str | None]]] = {
+    "Jollof Rice": {
+        "Long grain rice": (3, "cups"),
+        "Tomato paste": (3, "tbsp"),
+        "Tomato (fresh)": (4, "medium"),
+        "Scotch bonnet pepper": (2, None),
+        "Onion": (2, "medium"),
+        "Bouillon cubes (Maggi)": (2, "cubes"),
+        "Curry powder (Nigerian)": (1, "tsp"),
+        "Thyme": (1, "tsp"),
+        "Vegetable oil": (0.33, "cup"),
+    },
+    "Egusi Soup": {
+        "Egusi seeds": (2, "cups"),
+        "Red palm oil": (0.5, "cup"),
+        "Ugwu leaves": (2, "cups"),
+        "Stockfish": (1, "piece"),
+        "Dried crayfish": (2, "tbsp"),
+        "Locust beans (Iru)": (1, "tbsp"),
+        "Scotch bonnet pepper": (2, None),
+        "Onion": (1, "medium"),
+    },
+    "Suya": {
+        "Beef": (500, "g"),
+        "Suya spice (Yaji)": (3, "tbsp"),
+        "Groundnut paste (peanut butter)": (2, "tbsp"),
+        "Ginger": (1, "tsp"),
+        "Garlic": (1, "tsp"),
+        "Vegetable oil": (2, "tbsp"),
+    },
+    "Moi Moi": {
+        "Black-eyed peas": (2, "cups"),
+        "Red palm oil": (0.25, "cup"),
+        "Scotch bonnet pepper": (1, None),
+        "Onion": (1, "medium"),
+        "Eggs": (3, None),
+        "Bouillon cubes (Maggi)": (1, "cube"),
+    },
+    "Akara": {
+        "Black-eyed peas": (2, "cups"),
+        "Scotch bonnet pepper": (1, None),
+        "Onion": (1, "small"),
+        "Vegetable oil": (None, None),
+        "Salt": (None, None),
+    },
+    "Efo Riro": {
+        "Ugwu leaves": (3, "cups"),
+        "Spinach": (2, "cups"),
+        "Red palm oil": (0.33, "cup"),
+        "Locust beans (Iru)": (1, "tbsp"),
+        "Scotch bonnet pepper": (2, None),
+        "Beef": (300, "g"),
+        "Onion": (1, "medium"),
+    },
+    "Waakye": {
+        "Long grain rice": (2, "cups"),
+        "Black-eyed peas": (1, "cup"),
+        "Shito": (2, "tbsp"),
+        "Onion": (1, "medium"),
+        "Salt": (None, None),
+    },
+    "Banku and Tilapia": {
+        "Gari (cassava flour)": (1, "cup"),
+        "Cornmeal (maize meal)": (1, "cup"),
+        "Fish (tilapia)": (2, "whole"),
+        "Scotch bonnet pepper": (2, None),
+        "Onion": (1, "medium"),
+    },
+    "Kelewele": {
+        "Plantains": (3, None),
+        "Ginger": (1, "tbsp"),
+        "Scotch bonnet pepper": (1, None),
+        "Vegetable oil": (None, None),
+        "Salt": (None, None),
+    },
+    "Groundnut Soup": {
+        "Groundnut paste (peanut butter)": (1, "cup"),
+        "Chicken": (500, "g"),
+        "Scotch bonnet pepper": (1, None),
+        "Ginger": (1, "tbsp"),
+        "Onion": (1, "medium"),
+        "Tomato paste": (2, "tbsp"),
+    },
+}
+
+
 # ── Food → curated external recipe links ───────────────────────────────────
 # We link to recipe content (YouTube / articles) rather than authoring steps;
 # the defensible layer is ingredient sourcing, not the recipe text. Each value

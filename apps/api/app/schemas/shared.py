@@ -16,6 +16,7 @@ class FoodSummary(BaseModel):
     cuisines: list[str] = Field(default_factory=list)
     prep_minutes: int | None = None
     cook_minutes: int | None = None
+    servings: int | None = None
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
