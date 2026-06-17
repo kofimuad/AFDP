@@ -14,7 +14,10 @@ from app.services.admin_management_service import (
     update_user_role,
     update_vendor_plan,
 )
+from app.schemas.food import FoodDetailOut
+from app.schemas.recipe import RecipeCreate
 from app.services.auth_service import require_admin
+from app.services.food_service import create_recipe
 from app.services.vendor_service import (
     delete_vendor,
     set_vendor_delivery,
@@ -81,6 +84,16 @@ async def list_vendors_route(
     _: dict = Depends(require_admin),
 ):
     return await list_all_vendors(q=q, is_verified=is_verified, plan=plan, page=page, page_size=page_size)
+
+
+@router.post("/recipes", response_model=FoodDetailOut)
+async def create_recipe_route(
+    payload: RecipeCreate,
+    _: dict = Depends(require_admin),
+) -> FoodDetailOut:
+    """Admin path to add a recipe to the dish repository (upsert by slug)."""
+    data = await create_recipe(payload)
+    return FoodDetailOut.model_validate(data)
 
 
 @router.patch("/vendors/{vendor_id}/verify")

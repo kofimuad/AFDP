@@ -1,6 +1,6 @@
 "use client";
 
-import { ChefHat, ChevronRight, Clock, Flame, PlayCircle, ShoppingBasket, Utensils } from "lucide-react";
+import { ChefHat, ChevronRight, Clock, Flame, PlayCircle, ShoppingBasket, Users, Utensils } from "lucide-react";
 import Link from "next/link";
 
 import { Accordion, AccordionItem } from "@/components/ui/Accordion";
@@ -199,6 +199,12 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
               <TimeStat icon={<Flame size={16} />} label="Cook" minutes={cook} />
               <TimeStat icon={<ChefHat size={16} />} label="Total" minutes={total > 0 ? total : null} highlight />
             </div>
+          )}
+          {food.servings != null && (
+            <p className="flex items-center gap-1.5 text-sm font-medium text-[var(--color-text-muted)]">
+              <Users size={15} className="text-[var(--color-grocery)]" />
+              Serves {food.servings}
+            </p>
           )}
 
           {/* Shopping list — which nearby stores stock each ingredient */}

@@ -10,6 +10,7 @@ export interface FoodSummary {
   cuisines: string[];
   prep_minutes: number | null;
   cook_minutes: number | null;
+  servings: number | null;
   created_at: string | null;
 }
 
@@ -57,6 +58,8 @@ export interface Vendor extends VendorSummary {
 
 export interface FoodIngredient {
   ingredient: IngredientSummary;
+  quantity: number | null;
+  unit: string | null;
   quantity_note: string | null;
 }
 

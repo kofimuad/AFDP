@@ -11,6 +11,15 @@ import type { FoodIngredient, IngredientStores, VendorSummary } from "@/types";
 
 const RADII = [5, 10, 25] as const;
 
+/** Prefer the structured "3 cups" amount; fall back to the free-text note. */
+function formatAmount(item: FoodIngredient): string | null {
+  if (item.quantity != null) {
+    const qty = Number.isInteger(item.quantity) ? String(item.quantity) : item.quantity.toFixed(2).replace(/\.?0+$/, "");
+    return item.unit ? `${qty} ${item.unit}` : qty;
+  }
+  return item.quantity_note;
+}
+
 interface IngredientStoreFinderProps {
   slug: string;
   ingredients: FoodIngredient[];
@@ -119,8 +128,8 @@ export function IngredientStoreFinder({ slug, ingredients }: IngredientStoreFind
                 <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--color-grocery)]" aria-hidden="true" />
                 <span className="flex-1 text-sm font-medium text-[var(--color-text-primary)]">
                   {item.ingredient.name}
-                  {item.quantity_note ? (
-                    <span className="font-normal text-[var(--color-text-muted)]"> · {item.quantity_note}</span>
+                  {formatAmount(item) ? (
+                    <span className="font-normal text-[var(--color-text-muted)]"> · {formatAmount(item)}</span>
                   ) : null}
                 </span>
                 {coords && loading && !data ? (

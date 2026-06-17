@@ -26,6 +26,7 @@ FOODS = [
         "image_url": "https://images.example.com/jollof-rice.jpg",
         "prep_minutes": 20,
         "cook_minutes": 45,
+        "servings": 6,
         "cuisines": ["Ghanaian", "Nigerian"],
     },
     {
@@ -34,6 +35,7 @@ FOODS = [
         "image_url": "https://images.example.com/egusi-soup.jpg",
         "prep_minutes": 25,
         "cook_minutes": 50,
+        "servings": 6,
         "cuisines": ["Cameroonian", "Nigerian"],
     },
     {
@@ -42,6 +44,7 @@ FOODS = [
         "image_url": "https://images.example.com/injera-doro-wat.jpg",
         "prep_minutes": 40,
         "cook_minutes": 90,
+        "servings": 4,
         "cuisines": ["Eritrean", "Ethiopian"],
     },
 ]
@@ -138,14 +141,15 @@ async def seed() -> None:
         for food in FOODS:
             food_id = await conn.fetchval(
                 """
-                INSERT INTO foods (id, name, slug, description, image_url, prep_minutes, cook_minutes)
-                VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)
+                INSERT INTO foods (id, name, slug, description, image_url, prep_minutes, cook_minutes, servings)
+                VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)
                 ON CONFLICT (slug) DO UPDATE SET
                     name = EXCLUDED.name,
                     description = EXCLUDED.description,
                     image_url = EXCLUDED.image_url,
                     prep_minutes = EXCLUDED.prep_minutes,
-                    cook_minutes = EXCLUDED.cook_minutes
+                    cook_minutes = EXCLUDED.cook_minutes,
+                    servings = EXCLUDED.servings
                 RETURNING id;
                 """,
                 food["name"],
@@ -154,6 +158,7 @@ async def seed() -> None:
                 food["image_url"],
                 food.get("prep_minutes"),
                 food.get("cook_minutes"),
+                food.get("servings"),
             )
             food_ids[food["name"]] = str(food_id)
             await conn.execute(
@@ -193,23 +198,40 @@ async def seed() -> None:
             )
             ingredient_ids[ingredient_name] = str(ingredient_id)
 
+        # (ingredient, quantity_note, quantity, unit) — Jollof carries structured
+        # amounts so the recipe data model is exercised end to end.
         food_ingredient_map = {
-            "Jollof Rice": ["Long grain rice", "Tomato paste", "Scotch bonnet pepper"],
-            "Egusi Soup": ["Egusi seeds", "Palm oil"],
-            "Injera with Doro Wat": ["Berbere spice", "Teff flour"],
+            "Jollof Rice": [
+                ("Long grain rice", "3 cups", 3, "cups"),
+                ("Tomato paste", "3 tbsp", 3, "tbsp"),
+                ("Scotch bonnet pepper", "2, blended", 2, None),
+            ],
+            "Egusi Soup": [
+                ("Egusi seeds", "2 cups, ground", 2, "cups"),
+                ("Palm oil", "1/2 cup", 0.5, "cup"),
+            ],
+            "Injera with Doro Wat": [
+                ("Berbere spice", "3 tbsp", 3, "tbsp"),
+                ("Teff flour", "4 cups", 4, "cups"),
+            ],
         }
 
-        for food_name, ingredient_names in food_ingredient_map.items():
-            for ingredient_name in ingredient_names:
+        for food_name, rows in food_ingredient_map.items():
+            for ingredient_name, note, quantity, unit in rows:
                 await conn.execute(
                     """
-                    INSERT INTO food_ingredients (food_id, ingredient_id, quantity_note)
-                    VALUES ($1, $2, $3)
-                    ON CONFLICT (food_id, ingredient_id) DO UPDATE SET quantity_note = EXCLUDED.quantity_note;
+                    INSERT INTO food_ingredients (food_id, ingredient_id, quantity_note, quantity, unit)
+                    VALUES ($1, $2, $3, $4, $5)
+                    ON CONFLICT (food_id, ingredient_id) DO UPDATE SET
+                        quantity_note = EXCLUDED.quantity_note,
+                        quantity = EXCLUDED.quantity,
+                        unit = EXCLUDED.unit;
                     """,
                     food_ids[food_name],
                     ingredient_ids[ingredient_name],
-                    "As needed",
+                    note,
+                    quantity,
+                    unit,
                 )
 
         # Recipe links — upsert by (food_id, url) so re-seeding stays idempotent.

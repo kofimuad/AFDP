@@ -7,6 +7,9 @@ class FoodIngredientOut(BaseModel):
     """Food ingredient relationship payload."""
 
     ingredient: IngredientSummary
+    # Structured amount (when curated) + the free-text note as a fallback/extra.
+    quantity: float | None = None
+    unit: str | None = None
     quantity_note: str | None = None
 
 

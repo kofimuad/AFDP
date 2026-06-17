@@ -4,8 +4,10 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
+from slugify import slugify
 
-from app.core.database import fetch, fetchrow
+from app.core.database import execute, fetch, fetchrow
+from app.schemas.recipe import RecipeCreate
 from app.services.geo_service import fetch_vendors_within_radius
 from app.services.vendor_service import _dedupe_vendors, _row_to_vendor_summary
 from app.services.query_utils import bind_param
@@ -29,6 +31,7 @@ def _row_to_food_summary(row: dict[str, Any]) -> dict[str, Any]:
         "cuisines": list(row.get("cuisines") or []),
         "prep_minutes": row.get("prep_minutes"),
         "cook_minutes": row.get("cook_minutes"),
+        "servings": row.get("servings"),
         "created_at": row.get("created_at"),
     }
 
@@ -93,7 +96,7 @@ async def list_foods(
     sql = f"""
         SELECT
             f.id, f.name, f.slug, f.description, f.image_url,
-            f.prep_minutes, f.cook_minutes, f.created_at,
+            f.prep_minutes, f.cook_minutes, f.servings, f.created_at,
             {_FOOD_REGION_SELECT},
             {_FOOD_CUISINES_SELECT}
         FROM foods f
@@ -114,7 +117,7 @@ async def get_food_detail(slug: str, lat: float | None = None, lng: float | None
         f"""
         SELECT
             f.id, f.name, f.slug, f.description, f.image_url,
-            f.prep_minutes, f.cook_minutes, f.created_at,
+            f.prep_minutes, f.cook_minutes, f.servings, f.created_at,
             {_FOOD_REGION_SELECT},
             {_FOOD_CUISINES_SELECT}
         FROM foods f
@@ -132,6 +135,8 @@ async def get_food_detail(slug: str, lat: float | None = None, lng: float | None
             i.name,
             i.slug,
             i.image_url,
+            fi.quantity,
+            fi.unit,
             fi.quantity_note
         FROM food_ingredients fi
         JOIN ingredients i ON i.id = fi.ingredient_id
@@ -164,6 +169,8 @@ async def get_food_detail(slug: str, lat: float | None = None, lng: float | None
                     "slug": row["slug"],
                     "image_url": row.get("image_url"),
                 },
+                "quantity": float(row["quantity"]) if row.get("quantity") is not None else None,
+                "unit": row.get("unit"),
                 "quantity_note": row.get("quantity_note"),
             }
             for row in ingredients
@@ -172,6 +179,89 @@ async def get_food_detail(slug: str, lat: float | None = None, lng: float | None
         "stores": stores,
         "recipe_links": [dict(row) for row in recipe_links],
     }
+
+
+async def create_recipe(payload: RecipeCreate) -> dict[str, Any]:
+    """Admin path: create (or upsert by slug) a recipe with its ingredients.
+
+    Region, cuisines, and ingredients are matched by name and created on the fly,
+    so the dish repository can grow over time without pre-seeding reference rows.
+    Returns the created recipe's full detail.
+    """
+
+    slug = slugify(payload.name)
+    food = await fetchrow(
+        """
+        INSERT INTO foods (id, name, slug, description, image_url, prep_minutes, cook_minutes, servings)
+        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (slug) DO UPDATE SET
+            name = EXCLUDED.name,
+            description = EXCLUDED.description,
+            image_url = EXCLUDED.image_url,
+            prep_minutes = EXCLUDED.prep_minutes,
+            cook_minutes = EXCLUDED.cook_minutes,
+            servings = EXCLUDED.servings
+        RETURNING id;
+        """,
+        payload.name,
+        slug,
+        payload.description,
+        payload.image_url,
+        payload.prep_minutes,
+        payload.cook_minutes,
+        payload.servings,
+    )
+    food_id = food["id"]
+
+    if payload.region:
+        region = await fetchrow(
+            "INSERT INTO regions (id, name) VALUES (gen_random_uuid(), $1) "
+            "ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id;",
+            payload.region,
+        )
+        await execute(
+            "INSERT INTO food_regions (food_id, region_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;",
+            food_id,
+            region["id"],
+        )
+
+    for cuisine_name in payload.cuisines:
+        cuisine = await fetchrow(
+            "INSERT INTO cuisines (id, name, slug) VALUES (gen_random_uuid(), $1, $2) "
+            "ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id;",
+            cuisine_name,
+            slugify(cuisine_name),
+        )
+        await execute(
+            "INSERT INTO food_cuisines (food_id, cuisine_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;",
+            food_id,
+            cuisine["id"],
+        )
+
+    for ing in payload.ingredients:
+        ingredient = await fetchrow(
+            "INSERT INTO ingredients (id, name, slug) VALUES (gen_random_uuid(), $1, $2) "
+            "ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name RETURNING id;",
+            ing.name,
+            slugify(ing.name),
+        )
+        await execute(
+            """
+            INSERT INTO food_ingredients (food_id, ingredient_id, quantity_note, quantity, unit)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (food_id, ingredient_id) DO UPDATE SET
+                quantity_note = EXCLUDED.quantity_note,
+                quantity = EXCLUDED.quantity,
+                unit = EXCLUDED.unit;
+            """,
+            food_id,
+            ingredient["id"],
+            ing.quantity_note,
+            ing.quantity,
+            ing.unit,
+        )
+
+    return await get_food_detail(slug)
 
 
 async def find_ingredient_stores_for_food(

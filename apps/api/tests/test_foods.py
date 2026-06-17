@@ -1,6 +1,23 @@
 from __future__ import annotations
 
+import uuid
+
 import pytest
+
+from app.core.database import execute
+
+
+async def _admin_headers(client) -> dict[str, str]:
+    """Register a user, promote to admin in the DB, return an auth header."""
+    email = f"chef-admin-{uuid.uuid4().hex[:10]}@example.com"
+    res = await client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "full_name": "Recipe Admin", "password": "password123"},
+    )
+    assert res.status_code in (200, 201), res.text
+    body = res.json()
+    await execute("UPDATE users SET role = 'admin' WHERE id = $1;", uuid.UUID(body["user"]["id"]))
+    return {"Authorization": f"Bearer {body['access_token']}"}
 
 
 @pytest.mark.asyncio
@@ -19,6 +36,69 @@ async def test_get_food_by_slug_returns_ingredients(client) -> None:
     payload = response.json()
     assert payload["slug"] == "jollof-rice"
     assert len(payload["ingredients"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_food_detail_has_servings_and_structured_quantities(client) -> None:
+    response = await client.get("/api/v1/foods/jollof-rice")
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert isinstance(payload["servings"], int) and payload["servings"] > 0
+    # At least one ingredient carries a structured quantity + unit (not just a note).
+    structured = [
+        i for i in payload["ingredients"] if i.get("quantity") is not None and i.get("unit")
+    ]
+    assert len(structured) >= 1
+    assert structured[0]["quantity_note"]  # free-text note still present alongside
+
+
+@pytest.mark.asyncio
+async def test_admin_can_create_recipe(client) -> None:
+    headers = await _admin_headers(client)
+    slug = f"test-dish-{uuid.uuid4().hex[:8]}"
+    payload = {
+        "name": slug.replace("-", " ").title(),
+        "description": "An admin-created test dish.",
+        "region": "West African",
+        "cuisines": ["Nigerian"],
+        "prep_minutes": 15,
+        "cook_minutes": 30,
+        "servings": 4,
+        "ingredients": [
+            {"name": "Yam", "quantity": 1, "unit": "tuber", "quantity_note": "1 medium"},
+            {"name": "Palm oil", "quantity": 0.25, "unit": "cup"},
+            {"name": "Scotch bonnet pepper", "quantity": 2, "unit": None, "quantity_note": "blended"},
+        ],
+    }
+    res = await client.post("/api/v1/admin/manage/recipes", json=payload, headers=headers)
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["servings"] == 4
+    assert body["cuisines"] == ["Nigerian"]
+    assert len(body["ingredients"]) == 3
+    assert any(i["quantity"] == 1 and i["unit"] == "tuber" for i in body["ingredients"])
+
+    # The new recipe is now in the catalog.
+    fetched = await client.get(f"/api/v1/foods/{body['slug']}")
+    assert fetched.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_create_recipe_requires_admin(client) -> None:
+    # A normal (non-admin) user is forbidden.
+    email = f"plain-{uuid.uuid4().hex[:10]}@example.com"
+    reg = await client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "full_name": "Plain User", "password": "password123"},
+    )
+    headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
+    res = await client.post(
+        "/api/v1/admin/manage/recipes",
+        json={"name": "Sneaky Dish", "ingredients": []},
+        headers=headers,
+    )
+    assert res.status_code == 403
 
 
 @pytest.mark.asyncio

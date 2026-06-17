@@ -29,9 +29,11 @@ from scripts.sourcing.catalog import (  # noqa: E402
     FOOD_CUISINES,
     FOOD_INGREDIENTS,
     FOOD_RECIPE_LINKS,
+    FOOD_SERVINGS,
     FOODS,
     INGREDIENTS,
     REGIONS,
+    STRUCTURED_QUANTITIES,
     food_image_url,
     ingredient_image_url,
 )
@@ -72,14 +74,15 @@ async def _upsert_catalog(conn: asyncpg.Connection) -> tuple[dict[str, str], dic
     for food in FOODS:
         fid = await conn.fetchval(
             """
-            INSERT INTO foods (id, name, slug, description, image_url, prep_minutes, cook_minutes)
-            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)
+            INSERT INTO foods (id, name, slug, description, image_url, prep_minutes, cook_minutes, servings)
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (slug) DO UPDATE SET
                 name = EXCLUDED.name,
                 description = EXCLUDED.description,
                 image_url = EXCLUDED.image_url,
                 prep_minutes = EXCLUDED.prep_minutes,
-                cook_minutes = EXCLUDED.cook_minutes
+                cook_minutes = EXCLUDED.cook_minutes,
+                servings = EXCLUDED.servings
             RETURNING id;
             """,
             food["name"],
@@ -88,6 +91,7 @@ async def _upsert_catalog(conn: asyncpg.Connection) -> tuple[dict[str, str], dic
             food_image_url(food["name"]),
             food.get("prep_minutes"),
             food.get("cook_minutes"),
+            FOOD_SERVINGS.get(food["name"]),
         )
         food_ids[food["name"]] = fid
         rid = region_ids.get(food["region"])
@@ -135,20 +139,27 @@ async def _upsert_catalog(conn: asyncpg.Connection) -> tuple[dict[str, str], dic
         fid = food_ids.get(food_name)
         if not fid:
             continue
+        structured = STRUCTURED_QUANTITIES.get(food_name, {})
         for ing_name, quantity_note in ing_list:
             iid = ingredient_ids.get(ing_name)
             if not iid:
                 continue
+            quantity, unit = structured.get(ing_name, (None, None))
             await conn.execute(
                 """
-                INSERT INTO food_ingredients (food_id, ingredient_id, quantity_note)
-                VALUES ($1, $2, $3)
+                INSERT INTO food_ingredients (food_id, ingredient_id, quantity_note, quantity, unit)
+                VALUES ($1, $2, $3, $4, $5)
                 ON CONFLICT (food_id, ingredient_id)
-                DO UPDATE SET quantity_note = EXCLUDED.quantity_note;
+                DO UPDATE SET
+                    quantity_note = EXCLUDED.quantity_note,
+                    quantity = EXCLUDED.quantity,
+                    unit = EXCLUDED.unit;
                 """,
                 fid,
                 iid,
                 quantity_note,
+                quantity,
+                unit,
             )
 
     # Curated external recipe links — upsert by (food_id, url) so re-running on
