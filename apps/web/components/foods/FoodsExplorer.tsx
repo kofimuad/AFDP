@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { SaveDishButton } from "@/components/food/SaveDishButton";
 import { useToast } from "@/lib/store/toastStore";
 import { cn } from "@/lib/utils";
 import type { FoodSummary } from "@/types";
@@ -382,43 +383,51 @@ export function FoodsExplorer({
               {shown.map((food) => {
                 const times = formatTimes(food.prep_minutes, food.cook_minutes);
                 return (
-                  <Link
+                  <div
                     key={food.id}
-                    href={`/foods/${food.slug}` as Route}
-                    aria-label={food.name}
-                    className="group block overflow-hidden rounded-[var(--radius-md)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
+                    className="group relative overflow-hidden rounded-[var(--radius-md)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
                   >
-                    <div className="relative">
-                      {food.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={food.image_url}
-                          alt={food.name}
-                          loading="lazy"
-                          className="aspect-square w-full object-cover transition duration-300 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="food-gradient-dish aspect-square w-full" />
-                      )}
-                      {food.region && (
-                        <span className="absolute left-2 top-2 rounded-full bg-[var(--color-dark)]/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
-                          {food.region}
-                        </span>
-                      )}
+                    {/* Save (icon) — overlaid outside the link so the button isn't nested in an anchor */}
+                    <div className="absolute right-2 top-2 z-10">
+                      <SaveDishButton
+                        food={{ slug: food.slug, name: food.name, description: food.description, image_url: food.image_url }}
+                        variant="icon"
+                        className="h-9 w-9 border-0 bg-[var(--color-surface)]/90 shadow-[var(--shadow-sm)] backdrop-blur"
+                      />
                     </div>
-                    <div className="p-3 sm:p-3.5">
-                      <p className="font-semibold text-[var(--color-text-primary)]">{food.name}</p>
-                      {times && (
-                        <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)]">
-                          <Clock size={13} className="shrink-0" />
-                          {times}
+                    <Link href={`/foods/${food.slug}` as Route} aria-label={food.name} className="block">
+                      <div className="relative">
+                        {food.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={food.image_url}
+                            alt={food.name}
+                            loading="lazy"
+                            className="aspect-square w-full object-cover transition duration-300 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="food-gradient-dish aspect-square w-full" />
+                        )}
+                        {food.region && (
+                          <span className="absolute left-2 top-2 rounded-full bg-[var(--color-dark)]/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+                            {food.region}
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-3 sm:p-3.5">
+                        <p className="font-semibold text-[var(--color-text-primary)]">{food.name}</p>
+                        {times && (
+                          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)]">
+                            <Clock size={13} className="shrink-0" />
+                            {times}
+                          </p>
+                        )}
+                        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--color-text-muted)]">
+                          {food.description ?? "Traditional and modern African flavors."}
                         </p>
-                      )}
-                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--color-text-muted)]">
-                        {food.description ?? "Traditional and modern African flavors."}
-                      </p>
-                    </div>
-                  </Link>
+                      </div>
+                    </Link>
+                  </div>
                 );
               })}
             </div>

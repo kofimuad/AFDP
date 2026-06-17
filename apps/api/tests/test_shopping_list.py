@@ -77,6 +77,30 @@ async def test_list_combines_recipes_without_duplicates(client) -> None:
 
 
 @pytest.mark.asyncio
+async def test_build_list_from_saved_recipes(client) -> None:
+    headers = await _register(client)
+
+    # Save two dishes to the collection, then feed them into the shopping list.
+    await client.post("/api/v1/saved/foods/jollof-rice", headers=headers)
+    await client.post("/api/v1/saved/foods/egusi-soup", headers=headers)
+
+    res = await client.post("/api/v1/shopping-list/from-saved", headers=headers)
+    assert res.status_code == 200
+    body = res.json()
+    assert body["recipes"] == 2
+    assert body["added"] >= 1
+    assert body["total"] == body["added"]  # list was empty before
+
+    listed = (await client.get("/api/v1/shopping-list", headers=headers)).json()
+    ids = [it["ingredient"]["id"] for it in listed["items"]]
+    assert len(ids) == len(set(ids))  # combined + deduped across both recipes
+
+    # Idempotent — re-running adds nothing new.
+    again = await client.post("/api/v1/shopping-list/from-saved", headers=headers)
+    assert again.json()["added"] == 0
+
+
+@pytest.mark.asyncio
 async def test_best_stores_rank_by_coverage_then_proximity(client) -> None:
     headers = await _register(client)
     await client.post("/api/v1/shopping-list/recipes/jollof-rice", headers=headers)

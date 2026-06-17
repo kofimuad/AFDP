@@ -34,6 +34,14 @@ class AddRecipeResult(BaseModel):
     total: int  # list size after adding
 
 
+class AddFromSavedResult(BaseModel):
+    """Result of building the shopping list from all saved recipes."""
+
+    recipes: int  # how many saved dishes contributed
+    added: int    # newly-added ingredients
+    total: int    # list size after adding
+
+
 class ItemCheck(BaseModel):
     checked: bool
 
