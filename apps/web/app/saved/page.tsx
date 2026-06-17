@@ -1,11 +1,14 @@
 "use client";
 
-import { Bookmark, Heart, MapPin, Store, Utensils } from "lucide-react";
+import { Bookmark, Heart, ListPlus, Loader2, MapPin, Store, Utensils } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/Badge";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { addSavedRecipesToShoppingList } from "@/lib/api";
+import { useAuthStore } from "@/lib/store/authStore";
 import { useSavedStore, type SavedFood, type SavedVendor } from "@/lib/store/savedStore";
 import { useToast } from "@/lib/store/toastStore";
 
@@ -18,8 +21,33 @@ export default function SavedPage() {
   const removeFood = useSavedStore((s) => s.removeFood);
   const removeVendor = useSavedStore((s) => s.removeVendor);
   const { showToast } = useToast();
+  const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<TabId>("foods");
+  const [addingToList, setAddingToList] = useState(false);
+
+  async function addAllToShoppingList() {
+    if (!useAuthStore.getState().isAuthenticated()) {
+      showToast("Sign in to build a shopping list from your saved recipes.", "info");
+      router.push("/auth");
+      return;
+    }
+    setAddingToList(true);
+    try {
+      const res = await addSavedRecipesToShoppingList();
+      showToast(
+        res.added > 0
+          ? `Added ${res.added} ingredient${res.added === 1 ? "" : "s"} from ${res.recipes} recipe${res.recipes === 1 ? "" : "s"}`
+          : "Everything's already on your shopping list",
+        "success"
+      );
+      router.push("/shopping-list");
+    } catch {
+      showToast("Couldn't build your shopping list. Please try again.", "error");
+    } finally {
+      setAddingToList(false);
+    }
+  }
 
   const tabs = [
     { id: "foods", label: <TabLabel text="Foods" count={hasHydrated ? foods.length : 0} active={activeTab === "foods"} /> },
@@ -60,18 +88,35 @@ export default function SavedPage() {
                 ctaLabel="Explore dishes"
               />
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-5 lg:grid-cols-4">
-                {foods.map((food) => (
-                  <FoodCard
-                    key={food.slug}
-                    food={food}
-                    onRemove={() => {
-                      removeFood(food.slug);
-                      showToast("Removed from saved", "info");
-                    }}
-                  />
-                ))}
-              </div>
+              <>
+                {/* SCRUM-36: feed saved recipes into the multi-recipe shopping list */}
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-grocery-light)] bg-[var(--color-grocery-light)] px-4 py-3">
+                  <p className="text-sm font-medium text-[var(--color-grocery)]">
+                    Turn your saved recipes into one shopping list.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={addAllToShoppingList}
+                    disabled={addingToList}
+                    className="inline-flex items-center gap-2 rounded-full bg-[var(--color-grocery)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-70"
+                  >
+                    {addingToList ? <Loader2 size={16} className="animate-spin" /> : <ListPlus size={16} />}
+                    Add all to shopping list
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-5 lg:grid-cols-4">
+                  {foods.map((food) => (
+                    <FoodCard
+                      key={food.slug}
+                      food={food}
+                      onRemove={() => {
+                        removeFood(food.slug);
+                        showToast("Removed from saved", "info");
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </TabPanel>
 

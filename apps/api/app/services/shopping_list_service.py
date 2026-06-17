@@ -65,6 +65,36 @@ async def add_recipe_to_list(user_id: UUID, food_slug: str) -> dict[str, Any]:
     }
 
 
+async def add_saved_recipes_to_list(user_id: UUID) -> dict[str, Any]:
+    """Add every ingredient from the user's saved dishes to their shopping list.
+
+    This is the bridge from the saved collection (SCRUM-37) to the multi-recipe
+    shopping list — one tap turns all saved recipes into a combined, deduped list.
+    """
+
+    inserted = await fetch(
+        """
+        INSERT INTO shopping_list_items (user_id, ingredient_id, quantity_note, source_food_id)
+        SELECT $1, fi.ingredient_id, fi.quantity_note, fi.food_id
+        FROM saved_items s
+        JOIN food_ingredients fi ON fi.food_id = s.food_id
+        WHERE s.user_id = $1 AND s.item_type = 'food'
+        ON CONFLICT (user_id, ingredient_id) DO NOTHING
+        RETURNING id;
+        """,
+        user_id,
+    )
+    counts = await fetchrow(
+        """
+        SELECT
+            (SELECT COUNT(*) FROM saved_items WHERE user_id = $1 AND item_type = 'food') AS recipes,
+            (SELECT COUNT(*) FROM shopping_list_items WHERE user_id = $1) AS total;
+        """,
+        user_id,
+    )
+    return {"recipes": counts["recipes"], "added": len(inserted), "total": counts["total"]}
+
+
 async def get_shopping_list(user_id: UUID) -> dict[str, Any]:
     """Return the user's list, unchecked first, with recipe provenance."""
 

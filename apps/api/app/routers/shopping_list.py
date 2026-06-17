@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from app.schemas.error import ErrorResponse
 from app.schemas.shared import ActionResponse
 from app.schemas.shopping import (
+    AddFromSavedResult,
     AddRecipeResult,
     ItemCheck,
     ShoppingListItemOut,
@@ -16,6 +17,7 @@ from app.schemas.shopping import (
 from app.services.auth_service import get_current_user
 from app.services.shopping_list_service import (
     add_recipe_to_list,
+    add_saved_recipes_to_list,
     best_stores_for_list,
     clear_list,
     get_shopping_list,
@@ -44,6 +46,15 @@ async def add_recipe_route(
     """One tap: add a recipe's ingredients to the list (deduped across recipes)."""
     data = await add_recipe_to_list(UUID(current_user["id"]), slug)
     return AddRecipeResult.model_validate(data)
+
+
+@router.post("/from-saved", response_model=AddFromSavedResult, responses={**UNAUTHORIZED})
+async def add_from_saved_route(
+    current_user: dict = Depends(get_current_user),
+) -> AddFromSavedResult:
+    """Build the list from every saved recipe's ingredients (combined, deduped)."""
+    data = await add_saved_recipes_to_list(UUID(current_user["id"]))
+    return AddFromSavedResult.model_validate(data)
 
 
 @router.patch("/items/{item_id}", response_model=ShoppingListItemOut, responses={**UNAUTHORIZED, **NOT_FOUND})

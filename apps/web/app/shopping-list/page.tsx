@@ -1,10 +1,11 @@
 "use client";
 
-import { Loader2, MapPin, ShoppingBasket, Store, Trash2 } from "lucide-react";
+import { ListPlus, Loader2, MapPin, ShoppingBasket, Store, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  addSavedRecipesToShoppingList,
   clearShoppingList,
   getShoppingList,
   getShoppingListStores,
@@ -138,6 +139,28 @@ export default function ShoppingListPage() {
     }
   }
 
+  const [addingFromSaved, setAddingFromSaved] = useState(false);
+  async function addFromSaved() {
+    setAddingFromSaved(true);
+    try {
+      const res = await addSavedRecipesToShoppingList();
+      setList(await getShoppingList());
+      setStores(null);
+      showToast(
+        res.added > 0
+          ? `Added ${res.added} ingredient${res.added === 1 ? "" : "s"} from ${res.recipes} saved recipe${res.recipes === 1 ? "" : "s"}`
+          : res.recipes === 0
+            ? "You have no saved recipes yet."
+            : "Your saved recipes are already on the list.",
+        res.recipes === 0 ? "info" : "success"
+      );
+    } catch {
+      showToast("Couldn't add your saved recipes.", "error");
+    } finally {
+      setAddingFromSaved(false);
+    }
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────
   if (!hydrated || loading) {
     return (
@@ -184,16 +207,27 @@ export default function ShoppingListPage() {
               : "Add ingredients from any recipe to get started."}
           </p>
         </div>
-        {items.length > 0 && (
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={clearAll}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-error)] hover:text-[var(--color-error)]"
+            onClick={addFromSaved}
+            disabled={addingFromSaved}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-grocery)] px-3 py-1.5 text-xs font-semibold text-[var(--color-grocery)] transition hover:bg-[var(--color-grocery-light)] disabled:opacity-60"
           >
-            <Trash2 size={13} />
-            Clear list
+            {addingFromSaved ? <Loader2 size={13} className="animate-spin" /> : <ListPlus size={13} />}
+            Add from saved recipes
           </button>
-        )}
+          {items.length > 0 && (
+            <button
+              type="button"
+              onClick={clearAll}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-error)] hover:text-[var(--color-error)]"
+            >
+              <Trash2 size={13} />
+              Clear list
+            </button>
+          )}
+        </div>
       </div>
 
       {items.length === 0 ? (

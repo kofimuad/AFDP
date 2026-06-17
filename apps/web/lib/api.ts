@@ -332,6 +332,17 @@ export async function getShoppingList(): Promise<import("@/types").ShoppingList>
   return data;
 }
 
+export interface AddFromSavedResult {
+  recipes: number;
+  added: number;
+  total: number;
+}
+
+export async function addSavedRecipesToShoppingList(): Promise<AddFromSavedResult> {
+  const { data } = await api.post<AddFromSavedResult>("/shopping-list/from-saved");
+  return data;
+}
+
 export async function setShoppingItemChecked(
   itemId: string,
   checked: boolean
