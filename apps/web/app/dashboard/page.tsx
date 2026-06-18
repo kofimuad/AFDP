@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { StatsGrid, type StatItem } from "@/components/ui/DataDisplay";
 import { VendorViewsChart } from "@/components/vendor/VendorViewsChart";
+import { StockManager } from "@/components/vendor/StockManager.client";
 import { BarChart2, Bookmark, CheckCircle2, Clock, Eye, LayoutDashboard, Search, Settings, Store, TrendingUp } from "lucide-react";
 import { addVendorDish, addVendorGrocery, getMyVendorAnalytics, removeVendorItem, updateVendor, updateVendorItem, uploadVendorImage, getMyVendor } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/authStore';
@@ -229,8 +230,22 @@ function DashboardPageInner() {
                             <div className="text-xs text-[var(--color-text-muted)] mt-1">{isGrocery ? "Grocery Store" : "Restaurant"}</div>
                           </div>
                         </div>
+                        {isGrocery && (
+                          <div className="mb-4">
+                            <StockManager
+                              vendorId={vendor.id}
+                              initialStockedIds={
+                                visibleItems
+                                  .map((i) => i.ingredient?.id)
+                                  .filter((id): id is string => Boolean(id))
+                              }
+                            />
+                          </div>
+                        )}
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold text-md text-[var(--color-text-primary)]">{itemsLabel}</h3>
+                          <h3 className="font-semibold text-md text-[var(--color-text-primary)]">
+                            {isGrocery ? "Priced items" : itemsLabel}
+                          </h3>
                           <Button
                             onClick={() => {
                               setAddDishVendorId(vendor.id);

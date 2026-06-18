@@ -391,6 +391,21 @@ export async function getIngredient(slug: string, lat?: number, lng?: number): P
   return data;
 }
 
+export async function getIngredients(): Promise<import("@/types").IngredientSummary[]> {
+  const { data } = await api.get<import("@/types").IngredientSummary[]>("/ingredients");
+  return data;
+}
+
+// --- VENDOR STOCK: low-friction "carries this ingredient" flag ---
+
+export const setVendorStock = async (vendorId: string, ingredientId: string): Promise<void> => {
+  await api.put(`/vendors/${vendorId}/stock/${ingredientId}`);
+};
+
+export const removeVendorStock = async (vendorId: string, ingredientId: string): Promise<void> => {
+  await api.delete(`/vendors/${vendorId}/stock/${ingredientId}`);
+};
+
 // --- ENGAGEMENT TRACKING ---
 // Fire-and-forget; never throw so it can't break the UI.
 export async function trackView(
