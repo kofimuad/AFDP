@@ -21,9 +21,11 @@ from app.services.admin_management_service import (
 from app.schemas.admin import AdminStatsResponse
 from app.schemas.food import AdminFoodOut, FoodCreateIn, FoodDetailOut, FoodUpdateIn
 from app.schemas.recipe import RecipeCreate
+from app.schemas.suggestion import FoodSuggestionOut
 from app.services.admin_service import get_admin_stats
 from app.services.auth_service import require_admin
 from app.services.food_service import create_recipe
+from app.services.suggestion_service import accept_suggestion, decline_suggestion, list_suggestions_admin
 from app.services.vendor_service import (
     delete_vendor,
     set_vendor_delivery,
@@ -147,6 +149,38 @@ async def update_food_route(
 async def delete_food_route(slug: str, _: dict = Depends(require_admin)):
     await delete_food_admin(slug)
     return {"status": "deleted", "slug": slug}
+
+
+# ── Food suggestion moderation (mirrors vendor verify/approve) ──────────────
+
+
+@router.get("/food-suggestions", response_model=list[FoodSuggestionOut])
+async def list_food_suggestions_route(
+    status: str | None = Query(default="pending"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    _: dict = Depends(require_admin),
+) -> list[FoodSuggestionOut]:
+    rows = await list_suggestions_admin(status, page, page_size)
+    return [FoodSuggestionOut.model_validate(r) for r in rows]
+
+
+@router.patch("/food-suggestions/{suggestion_id}/accept", response_model=FoodSuggestionOut)
+async def accept_food_suggestion_route(
+    suggestion_id: UUID,
+    _: dict = Depends(require_admin),
+) -> FoodSuggestionOut:
+    """Accept a suggestion → creates the catalog food (SCRUM-64 path)."""
+    return FoodSuggestionOut.model_validate(await accept_suggestion(suggestion_id))
+
+
+@router.patch("/food-suggestions/{suggestion_id}/decline", response_model=FoodSuggestionOut)
+async def decline_food_suggestion_route(
+    suggestion_id: UUID,
+    _: dict = Depends(require_admin),
+) -> FoodSuggestionOut:
+    """Decline a suggestion → archived."""
+    return FoodSuggestionOut.model_validate(await decline_suggestion(suggestion_id))
 
 
 @router.patch("/vendors/{vendor_id}/verify")
