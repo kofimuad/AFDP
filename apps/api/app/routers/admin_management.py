@@ -8,13 +8,17 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from app.services.admin_management_service import (
+    create_food_admin,
+    delete_food_admin,
     list_all_vendors,
+    list_foods_admin,
     list_users,
     set_user_active,
+    update_food_admin,
     update_user_role,
     update_vendor_plan,
 )
-from app.schemas.food import FoodDetailOut
+from app.schemas.food import AdminFoodOut, FoodCreateIn, FoodDetailOut, FoodUpdateIn
 from app.schemas.recipe import RecipeCreate
 from app.services.auth_service import require_admin
 from app.services.food_service import create_recipe
@@ -94,6 +98,43 @@ async def create_recipe_route(
     """Admin path to add a recipe to the dish repository (upsert by slug)."""
     data = await create_recipe(payload)
     return FoodDetailOut.model_validate(data)
+
+
+# ── Food catalog management (SCRUM-53) ─────────────────────────────────────
+
+
+@router.get("/foods", response_model=list[AdminFoodOut])
+async def list_foods_route(
+    q: str | None = Query(default=None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    _: dict = Depends(require_admin),
+) -> list[AdminFoodOut]:
+    rows = await list_foods_admin(q=q, page=page, page_size=page_size)
+    return [AdminFoodOut.model_validate(r) for r in rows]
+
+
+@router.post("/foods", response_model=AdminFoodOut, status_code=201)
+async def create_food_route(
+    payload: FoodCreateIn,
+    _: dict = Depends(require_admin),
+) -> AdminFoodOut:
+    return AdminFoodOut.model_validate(await create_food_admin(payload))
+
+
+@router.patch("/foods/{slug}", response_model=AdminFoodOut)
+async def update_food_route(
+    slug: str,
+    payload: FoodUpdateIn,
+    _: dict = Depends(require_admin),
+) -> AdminFoodOut:
+    return AdminFoodOut.model_validate(await update_food_admin(slug, payload))
+
+
+@router.delete("/foods/{slug}")
+async def delete_food_route(slug: str, _: dict = Depends(require_admin)):
+    await delete_food_admin(slug)
+    return {"status": "deleted", "slug": slug}
 
 
 @router.patch("/vendors/{vendor_id}/verify")

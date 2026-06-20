@@ -595,3 +595,42 @@ export async function registerVendor(payload: RegisterVendorPayload): Promise<Ve
   const { data } = await api.post<Vendor>("/vendors/register", payload);
   return data;
 }
+// --- ADMIN FOOD CATALOG MANAGEMENT (SCRUM-53) ---
+
+export interface AdminFood {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  region: string | null
+  image_url: string | null
+  recipe_link: string | null
+  created_at: string | null
+}
+
+export interface AdminFoodInput {
+  name?: string
+  description?: string | null
+  region?: string | null
+  image_url?: string | null
+  recipe_link?: string | null
+}
+
+export const adminListFoods = async (params?: { q?: string; page?: number; page_size?: number }): Promise<AdminFood[]> => {
+  const { data } = await api.get<AdminFood[]>('/admin/manage/foods', { params })
+  return data
+}
+
+export const adminCreateFood = async (input: AdminFoodInput): Promise<AdminFood> => {
+  const { data } = await api.post<AdminFood>('/admin/manage/foods', input)
+  return data
+}
+
+export const adminUpdateFood = async (slug: string, input: AdminFoodInput): Promise<AdminFood> => {
+  const { data } = await api.patch<AdminFood>(`/admin/manage/foods/${slug}`, input)
+  return data
+}
+
+export const adminDeleteFood = async (slug: string): Promise<void> => {
+  await api.delete(`/admin/manage/foods/${slug}`)
+}

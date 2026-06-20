@@ -6,12 +6,15 @@ import {
   LayoutDashboard,
   type LucideIcon,
   MapPin,
+  Pencil,
+  Plus,
   Search,
   ShieldCheck,
   Star,
   Store,
   Trash2,
-  Users as UsersIcon
+  Users as UsersIcon,
+  Utensils
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import Map, { Marker, NavigationControl } from "react-map-gl";
@@ -19,9 +22,13 @@ import Map, { Marker, NavigationControl } from "react-map-gl";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { Badge } from "@/components/ui/Badge";
 import {
+  adminCreateFood,
+  adminDeleteFood,
   adminDeleteVendor,
+  adminListFoods,
   adminListUsers,
   adminListVendors,
+  adminUpdateFood,
   adminSetUserActive,
   adminSetVendorDelivery,
   adminToggleVendorFeature,
@@ -33,6 +40,7 @@ import {
   getTopSearches,
   getTopViewed,
   getZeroResultSearches,
+  type AdminFood,
   type AdminTotals,
   type AdminUser,
   type AdminVendor,
@@ -46,12 +54,13 @@ import { cn } from "@/lib/utils";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-type Tab = "overview" | "demand" | "vendors" | "users";
+type Tab = "overview" | "demand" | "vendors" | "foods" | "users";
 
 const NAV: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "demand", label: "Demand Map", icon: MapPin },
   { id: "vendors", label: "Vendors", icon: Store },
+  { id: "foods", label: "Foods", icon: Utensils },
   { id: "users", label: "Users", icon: UsersIcon }
 ];
 
@@ -119,6 +128,7 @@ function AdminInner() {
           {tab === "overview" && <OverviewTab onGoToVendors={() => setTab("vendors")} />}
           {tab === "demand" && <DemandTab />}
           {tab === "vendors" && <VendorsTab showToast={showToast} />}
+          {tab === "foods" && <FoodsTab showToast={showToast} />}
           {tab === "users" && <UsersTab showToast={showToast} />}
         </div>
       </div>
@@ -672,6 +682,223 @@ function UsersTab({ showToast }: { showToast: (msg: string, type?: "success" | "
                       >
                         {u.is_active ? "Deactivate" : "Activate"}
                       </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Foods (catalog management, SCRUM-53) ─────────────────────
+
+const EMPTY_FOOD = { name: "", region: "", description: "", image_url: "", recipe_link: "" };
+const FIELD_CLS =
+  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
+
+function FoodsTab({ showToast }: { showToast: (msg: string, type?: "success" | "error") => void }) {
+  const [foods, setFoods] = useState<AdminFood[]>([]);
+  const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  // null = form closed, "new" = creating, otherwise the slug being edited.
+  const [editing, setEditing] = useState<string | null>(null);
+  const [form, setForm] = useState(EMPTY_FOOD);
+
+  const reload = async () => {
+    setLoading(true);
+    try {
+      setFoods(await adminListFoods({ q: q || undefined, page_size: 200 }));
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const openCreate = () => {
+    setForm(EMPTY_FOOD);
+    setEditing("new");
+  };
+  const openEdit = (f: AdminFood) => {
+    setForm({
+      name: f.name,
+      region: f.region ?? "",
+      description: f.description ?? "",
+      image_url: f.image_url ?? "",
+      recipe_link: f.recipe_link ?? ""
+    });
+    setEditing(f.slug);
+  };
+
+  const save = async () => {
+    if (!form.name.trim()) {
+      showToast("Name is required", "error");
+      return;
+    }
+    setBusy(true);
+    const input = {
+      name: form.name.trim(),
+      description: form.description.trim() || null,
+      region: form.region.trim() || null,
+      image_url: form.image_url.trim() || null,
+      recipe_link: form.recipe_link.trim() || null
+    };
+    try {
+      if (editing === "new") {
+        await adminCreateFood(input);
+        showToast("Food added", "success");
+      } else if (editing) {
+        await adminUpdateFood(editing, input);
+        showToast("Food updated", "success");
+      }
+      setEditing(null);
+      await reload();
+    } catch (e) {
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      showToast(detail ?? "Save failed", "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const del = async (f: AdminFood) => {
+    if (!confirm(`Delete "${f.name}"? This removes it from the catalog.`)) return;
+    setBusy(true);
+    try {
+      await adminDeleteFood(f.slug);
+      showToast("Food deleted", "success");
+      await reload();
+    } catch {
+      showToast("Delete failed", "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SearchBar value={q} onChange={setQ} onSubmit={reload} placeholder="Search foods by name…" />
+        <button
+          type="button"
+          onClick={openCreate}
+          className="inline-flex items-center gap-2 rounded-full bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)]"
+        >
+          <Plus size={15} />
+          Add food
+        </button>
+      </div>
+
+      {editing !== null && (
+        <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <h3 className="font-semibold text-[var(--color-text-primary)]">
+            {editing === "new" ? "Add a food" : `Edit ${form.name}`}
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-sm">
+              <span className="mb-1 block text-[var(--color-text-muted)]">Name *</span>
+              <input className={FIELD_CLS} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-[var(--color-text-muted)]">Region</span>
+              <input className={FIELD_CLS} value={form.region} placeholder="e.g. West African" onChange={(e) => setForm((f) => ({ ...f, region: e.target.value }))} />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-[var(--color-text-muted)]">Image URL</span>
+              <input className={FIELD_CLS} value={form.image_url} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-[var(--color-text-muted)]">Recipe link (YouTube / article)</span>
+              <input className={FIELD_CLS} value={form.recipe_link} onChange={(e) => setForm((f) => ({ ...f, recipe_link: e.target.value }))} />
+            </label>
+            <label className="text-sm sm:col-span-2">
+              <span className="mb-1 block text-[var(--color-text-muted)]">Description</span>
+              <textarea className={FIELD_CLS} rows={2} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
+            </label>
+          </div>
+          {editing !== "new" && (
+            <p className="text-xs text-[var(--color-text-muted)]">The URL slug stays fixed when you rename a food, so saved links keep working.</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={save}
+              disabled={busy}
+              className="rounded-full bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(null)}
+              className="rounded-full border border-[var(--color-border)] px-5 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-[var(--color-surface-hover)]">
+              <tr className="text-left text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
+                <th className="px-4 py-3">Food</th>
+                <th className="px-4 py-3">Region</th>
+                <th className="px-4 py-3">Recipe</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-surface)]">
+              {loading ? (
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-[var(--color-text-muted)]">Loading…</td></tr>
+              ) : foods.length === 0 ? (
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-[var(--color-text-muted)]">No foods found.</td></tr>
+              ) : (
+                foods.map((f) => (
+                  <tr key={f.id}>
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-[var(--color-text-primary)]">{f.name}</div>
+                      <div className="text-xs text-[var(--color-text-muted)]">/{f.slug}</div>
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-text-muted)]">{f.region ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      {f.recipe_link ? (
+                        <a href={f.recipe_link} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline">
+                          link
+                        </a>
+                      ) : (
+                        <span className="text-[var(--color-text-muted)]">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(f)}
+                          className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
+                        >
+                          <Pencil size={12} />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => del(f)}
+                          disabled={busy}
+                          aria-label={`Delete ${f.name}`}
+                          className="inline-flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 text-[var(--color-error)] transition hover:bg-[var(--color-error-light)] disabled:opacity-50"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import asyncpg
+from passlib.context import CryptContext
 from slugify import slugify
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -15,6 +16,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.sourcing.catalog import FOOD_RECIPE_LINKS  # noqa: E402
 
 DB_URL = os.environ.get("DATABASE_URL")
+
+# Dev-only admin login (this seed is demo data — NOT run in production, which uses
+# seed_catalog). Use it to sign in and reach the admin dashboard locally.
+_PWD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
+ADMIN_EMAIL = "admin@afdp.dev"
+ADMIN_PASSWORD = "admin12345"
 
 if not DB_URL:
     raise RuntimeError("DATABASE_URL must be set to seed the DMV demo data")
@@ -113,6 +120,21 @@ async def seed() -> None:
     conn = await asyncpg.connect(DB_URL)
     try:
         await conn.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
+
+        # Dev admin login (idempotent).
+        await conn.execute(
+            """
+            INSERT INTO users (id, email, full_name, hashed_password, role, is_active)
+            VALUES (gen_random_uuid(), $1, 'AFDP Admin', $2, 'admin', true)
+            ON CONFLICT (email) DO UPDATE SET
+                role = 'admin',
+                hashed_password = EXCLUDED.hashed_password,
+                is_active = true;
+            """,
+            ADMIN_EMAIL,
+            _PWD_CONTEXT.hash(ADMIN_PASSWORD),
+        )
+        print(f"Seeded admin login: {ADMIN_EMAIL} / {ADMIN_PASSWORD}")
 
         region_id = await conn.fetchval(
             """

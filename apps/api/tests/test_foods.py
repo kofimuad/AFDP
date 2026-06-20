@@ -85,6 +85,62 @@ async def test_admin_can_create_recipe(client) -> None:
 
 
 @pytest.mark.asyncio
+async def test_admin_food_crud(client) -> None:
+    headers = await _admin_headers(client)
+    name = f"Admin Test Stew {uuid.uuid4().hex[:6]}"
+
+    # Create
+    created = await client.post(
+        "/api/v1/admin/manage/foods",
+        json={
+            "name": name,
+            "description": "A test dish.",
+            "region": "West African",
+            "image_url": "https://example.com/x.jpg",
+            "recipe_link": "https://www.youtube.com/watch?v=abc123",
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    food = created.json()
+    slug = food["slug"]
+    assert food["region"] == "West African"
+    assert "youtube.com" in food["recipe_link"]
+
+    # Appears in the admin list and the public catalog
+    listed = (await client.get("/api/v1/admin/manage/foods", headers=headers)).json()
+    assert any(f["slug"] == slug for f in listed)
+    public = await client.get(f"/api/v1/foods/{slug}")
+    assert public.status_code == 200
+    assert any(rl["is_primary"] and rl["source_type"] == "youtube" for rl in public.json()["recipe_links"])
+
+    # Update
+    upd = await client.patch(
+        f"/api/v1/admin/manage/foods/{slug}",
+        json={"description": "Updated description.", "region": "East African"},
+        headers=headers,
+    )
+    assert upd.status_code == 200
+    assert upd.json()["description"] == "Updated description."
+    assert upd.json()["region"] == "East African"
+
+    # Delete
+    assert (await client.delete(f"/api/v1/admin/manage/foods/{slug}", headers=headers)).status_code == 200
+    assert (await client.get(f"/api/v1/foods/{slug}")).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_admin_food_endpoints_require_admin(client) -> None:
+    reg = await client.post(
+        "/api/v1/auth/register",
+        json={"email": f"u-{uuid.uuid4().hex[:10]}@example.com", "full_name": "Plain User", "password": "password123"},
+    )
+    headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
+    res = await client.post("/api/v1/admin/manage/foods", json={"name": "Nope"}, headers=headers)
+    assert res.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_create_recipe_requires_admin(client) -> None:
     # A normal (non-admin) user is forbidden.
     email = f"plain-{uuid.uuid4().hex[:10]}@example.com"

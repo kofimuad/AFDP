@@ -6,8 +6,10 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
+from slugify import slugify
 
 from app.core.database import execute, fetch, fetchrow
+from app.schemas.food import FoodCreateIn, FoodUpdateIn
 
 ALLOWED_ROLES = {"user", "vendor", "admin"}
 ALLOWED_PLANS = {"basic", "featured", "premium"}
@@ -198,3 +200,149 @@ async def update_vendor_plan(vendor_id: UUID, plan: str) -> dict[str, Any]:
         "plan": row["plan"],
         "plan_expires_at": row["plan_expires_at"],
     }
+
+
+# ── Admin food management ──────────────────────────────────────────────────
+
+_ADMIN_FOOD_SELECT = """
+    SELECT
+        f.id, f.name, f.slug, f.description, f.image_url, f.created_at,
+        (SELECT r.name FROM food_regions fr JOIN regions r ON r.id = fr.region_id
+         WHERE fr.food_id = f.id ORDER BY r.name LIMIT 1) AS region,
+        (SELECT rl.url FROM recipe_links rl WHERE rl.food_id = f.id
+         ORDER BY rl.is_primary DESC, rl.created_at ASC LIMIT 1) AS recipe_link
+    FROM foods f
+"""
+
+
+def _detect_source_type(url: str) -> str:
+    u = url.lower()
+    return "youtube" if ("youtube.com" in u or "youtu.be" in u) else "article"
+
+
+def _admin_food_payload(row: Any) -> dict[str, Any]:
+    return {
+        "id": str(row["id"]),
+        "name": row["name"],
+        "slug": row["slug"],
+        "description": row["description"],
+        "region": row["region"],
+        "image_url": row["image_url"],
+        "recipe_link": row["recipe_link"],
+        "created_at": row["created_at"],
+    }
+
+
+async def _set_food_region(food_id: UUID, region_name: str | None) -> None:
+    """Set (or, with a blank string, clear) the food's single region."""
+    if region_name is None:
+        return
+    region_name = region_name.strip()
+    await execute("DELETE FROM food_regions WHERE food_id = $1;", food_id)
+    if not region_name:
+        return
+    region = await fetchrow(
+        "INSERT INTO regions (id, name) VALUES (gen_random_uuid(), $1) "
+        "ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id;",
+        region_name,
+    )
+    await execute(
+        "INSERT INTO food_regions (food_id, region_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;",
+        food_id,
+        region["id"],
+    )
+
+
+async def _set_food_primary_recipe_link(food_id: UUID, food_name: str, url: str | None) -> None:
+    """Set the food's primary recipe link (YouTube/article detected from the URL)."""
+    if url is None:
+        return
+    url = url.strip()
+    if not url:
+        return
+    await execute("UPDATE recipe_links SET is_primary = false WHERE food_id = $1;", food_id)
+    await execute(
+        """
+        INSERT INTO recipe_links (id, food_id, url, source_type, title, is_primary, last_checked)
+        VALUES (gen_random_uuid(), $1, $2, $3, $4, true, now())
+        ON CONFLICT (food_id, url) DO UPDATE SET
+            source_type = EXCLUDED.source_type,
+            title = EXCLUDED.title,
+            is_primary = true,
+            last_checked = now();
+        """,
+        food_id,
+        url,
+        _detect_source_type(url),
+        f"{food_name} recipe",
+    )
+
+
+async def get_admin_food(slug: str) -> dict[str, Any] | None:
+    row = await fetchrow(f"{_ADMIN_FOOD_SELECT} WHERE f.slug = $1;", slug)
+    return _admin_food_payload(row) if row else None
+
+
+async def list_foods_admin(q: str | None, page: int, page_size: int) -> list[dict[str, Any]]:
+    """List catalog foods for the admin table, newest first, optional name search."""
+    params: list[Any] = []
+    where = ""
+    if q:
+        params.append(f"%{q.lower()}%")
+        where = f"WHERE LOWER(f.name) LIKE ${len(params)}"
+    offset = max(page - 1, 0) * page_size
+    params.append(page_size)
+    params.append(offset)
+    sql = f"{_ADMIN_FOOD_SELECT} {where} ORDER BY f.created_at DESC LIMIT ${len(params) - 1} OFFSET ${len(params)};"
+    rows = await fetch(sql, *params)
+    return [_admin_food_payload(r) for r in rows]
+
+
+async def create_food_admin(payload: FoodCreateIn) -> dict[str, Any]:
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="Name is required")
+    slug = slugify(name)
+    if await fetchrow("SELECT id FROM foods WHERE slug = $1;", slug):
+        raise HTTPException(status_code=409, detail="A food with this name already exists")
+    food = await fetchrow(
+        "INSERT INTO foods (id, name, slug, description, image_url) "
+        "VALUES (gen_random_uuid(), $1, $2, $3, $4) RETURNING id;",
+        name,
+        slug,
+        payload.description,
+        payload.image_url,
+    )
+    await _set_food_region(food["id"], payload.region)
+    await _set_food_primary_recipe_link(food["id"], name, payload.recipe_link)
+    return await get_admin_food(slug)  # type: ignore[return-value]
+
+
+async def update_food_admin(slug: str, payload: FoodUpdateIn) -> dict[str, Any]:
+    """Update a food. Slug stays fixed (it identifies the food and backs saved links)."""
+    food = await fetchrow("SELECT id, name FROM foods WHERE slug = $1;", slug)
+    if not food:
+        raise HTTPException(status_code=404, detail="Food not found")
+    new_name = payload.name.strip() if payload.name else None
+    await execute(
+        """
+        UPDATE foods SET
+            name = COALESCE($2, name),
+            description = COALESCE($3, description),
+            image_url = COALESCE($4, image_url)
+        WHERE id = $1;
+        """,
+        food["id"],
+        new_name,
+        payload.description,
+        payload.image_url,
+    )
+    await _set_food_region(food["id"], payload.region)
+    await _set_food_primary_recipe_link(food["id"], new_name or food["name"], payload.recipe_link)
+    return await get_admin_food(slug)  # type: ignore[return-value]
+
+
+async def delete_food_admin(slug: str) -> None:
+    result = await execute("DELETE FROM foods WHERE slug = $1;", slug)
+    if result.endswith(" 0"):
+        raise HTTPException(status_code=404, detail="Food not found")
