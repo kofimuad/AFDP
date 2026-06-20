@@ -76,7 +76,7 @@ async def log_view_event(
 async def top_searches(limit: int = 20, days: int = 30) -> list[dict[str, Any]]:
     rows = await fetch(
         """
-        SELECT normalized_query AS query, COUNT(*) AS count,
+        SELECT normalized_query, COUNT(*) AS count,
                SUM(CASE WHEN zero_result THEN 1 ELSE 0 END) AS zero_result_count
         FROM search_events
         WHERE created_at >= now() - make_interval(days => $1)
@@ -93,7 +93,7 @@ async def top_searches(limit: int = 20, days: int = 30) -> list[dict[str, Any]]:
 async def top_zero_result_searches(limit: int = 20, days: int = 30) -> list[dict[str, Any]]:
     rows = await fetch(
         """
-        SELECT normalized_query AS query, COUNT(*) AS count,
+        SELECT normalized_query, COUNT(*) AS count,
                AVG(lat) AS avg_lat, AVG(lng) AS avg_lng
         FROM search_events
         WHERE zero_result = true
@@ -112,7 +112,7 @@ async def search_geo_points(days: int = 30, limit: int = 1000) -> list[dict[str,
     """Raw lat/lng of recent searches for a heatmap."""
     rows = await fetch(
         """
-        SELECT lat, lng, zero_result, normalized_query AS query, created_at
+        SELECT lat, lng, zero_result, normalized_query, created_at
         FROM search_events
         WHERE lat IS NOT NULL AND lng IS NOT NULL
           AND created_at >= now() - make_interval(days => $1)
@@ -128,12 +128,22 @@ async def search_geo_points(days: int = 30, limit: int = 1000) -> list[dict[str,
 async def top_viewed(entity_type: str, limit: int = 20, days: int = 30) -> list[dict[str, Any]]:
     rows = await fetch(
         """
-        SELECT entity_id, COUNT(*) AS views
-        FROM view_events
-        WHERE entity_type = $1
-          AND created_at >= now() - make_interval(days => $2)
-        GROUP BY entity_id
-        ORDER BY views DESC
+        SELECT
+            ve.entity_id,
+            COUNT(*) AS count,
+            COALESCE(
+                (SELECT v.name FROM vendors v WHERE v.id = ve.entity_id),
+                (SELECT f.name FROM foods f WHERE f.id = ve.entity_id)
+            ) AS name,
+            COALESCE(
+                (SELECT v.slug FROM vendors v WHERE v.id = ve.entity_id),
+                (SELECT f.slug FROM foods f WHERE f.id = ve.entity_id)
+            ) AS slug
+        FROM view_events ve
+        WHERE ve.entity_type = $1
+          AND ve.created_at >= now() - make_interval(days => $2)
+        GROUP BY ve.entity_id
+        ORDER BY count DESC
         LIMIT $3;
         """,
         entity_type,
