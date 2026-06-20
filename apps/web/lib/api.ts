@@ -45,12 +45,19 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Auth endpoints handle their own 401s (e.g. wrong password) — the global
+// interceptor must not hijack those into a redirect, or a failed login just
+// bounces back to /auth instead of showing the error.
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/vendor-register', '/auth/refresh']
+
 // Response interceptor — handle 401 with refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config
-    if (error.response?.status === 401 && !original._retry) {
+    const url: string = original?.url || ''
+    const isAuthEndpoint = AUTH_ENDPOINTS.some((p) => url.includes(p))
+    if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
       original._retry = true
       const refreshToken = localStorage.getItem('afdp-refresh-token')
       if (refreshToken) {
