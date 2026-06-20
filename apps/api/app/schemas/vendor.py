@@ -75,6 +75,14 @@ class VendorItemUpdate(BaseModel):
     price: float | None = None
 
 
+class VendorStockOut(BaseModel):
+    """Result of toggling whether a store carries a catalog ingredient."""
+
+    vendor_id: UUID
+    ingredient_id: UUID
+    stocked: bool
+
+
 class VendorItemCreate(BaseModel):
     """Payload for attaching a food or ingredient to a vendor."""
 

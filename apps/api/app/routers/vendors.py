@@ -13,6 +13,7 @@ from app.schemas.vendor import (
     VendorOut,
     VendorRegisterIn,
     VendorSelfUpdate,
+    VendorStockOut,
 )
 from app.services.analytics_service import log_view_event, vendor_analytics
 from app.services.auth_service import get_optional_user, require_vendor
@@ -26,10 +27,17 @@ from app.services.vendor_service import (
     list_vendors,
     register_vendor,
     remove_vendor_item,
+    set_vendor_stock,
     update_vendor,
     update_vendor_image,
     update_vendor_item,
 )
+
+
+def _assert_owner_or_admin(current_user: dict, vendor_id: UUID) -> None:
+    """A vendor may only edit its own listing; admins may edit any."""
+    if current_user["role"] != "admin" and current_user.get("vendor_id") != str(vendor_id):
+        raise HTTPException(status_code=403, detail="Not authorized for this vendor")
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -193,6 +201,38 @@ async def add_vendor_item_route(id: UUID, payload: VendorItemCreate) -> VendorIt
     """Attach a food or ingredient to a vendor."""
 
     return VendorItemOut.model_validate(await add_vendor_item(id, payload))
+
+
+@router.put(
+    "/{id}/stock/{ingredient_id}",
+    response_model=VendorStockOut,
+    responses={403: {"model": ErrorResponse}, 404: {"model": ErrorResponse}},
+)
+async def set_vendor_stock_route(
+    id: UUID,
+    ingredient_id: UUID,
+    current_user: dict = Depends(require_vendor),
+) -> VendorStockOut:
+    """Mark that this store carries a catalog ingredient (owner or admin)."""
+
+    _assert_owner_or_admin(current_user, id)
+    return VendorStockOut.model_validate(await set_vendor_stock(id, ingredient_id, True))
+
+
+@router.delete(
+    "/{id}/stock/{ingredient_id}",
+    response_model=VendorStockOut,
+    responses={403: {"model": ErrorResponse}, 404: {"model": ErrorResponse}},
+)
+async def unset_vendor_stock_route(
+    id: UUID,
+    ingredient_id: UUID,
+    current_user: dict = Depends(require_vendor),
+) -> VendorStockOut:
+    """Mark that this store no longer carries a catalog ingredient (owner or admin)."""
+
+    _assert_owner_or_admin(current_user, id)
+    return VendorStockOut.model_validate(await set_vendor_stock(id, ingredient_id, False))
 
 
 @router.post(

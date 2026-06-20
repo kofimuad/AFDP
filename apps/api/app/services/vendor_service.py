@@ -504,6 +504,47 @@ async def find_or_create_ingredient(
     raise HTTPException(status_code=500, detail="Unable to create ingredient")
 
 
+async def set_vendor_stock(vendor_id: UUID, ingredient_id: UUID, stocked: bool) -> dict[str, Any]:
+    """Low-friction "carries this ingredient" flag.
+
+    Links (or unlinks) an EXISTING catalog ingredient to a store — no price/SKU
+    needed. Using the normalized ingredient id (rather than a free-text name)
+    keeps the ingredient->store mapping clean so proximity queries resolve the
+    same ingredient across every store. Idempotent.
+    """
+
+    vendor = await fetchrow("SELECT id FROM vendors WHERE id = $1;", vendor_id)
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    ingredient = await fetchrow("SELECT id FROM ingredients WHERE id = $1;", ingredient_id)
+    if not ingredient:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+
+    if stocked:
+        existing = await fetchrow(
+            "SELECT id FROM vendor_items WHERE vendor_id = $1 AND ingredient_id = $2;",
+            vendor_id,
+            ingredient_id,
+        )
+        if not existing:
+            await execute(
+                """
+                INSERT INTO vendor_items (id, vendor_id, food_id, ingredient_id, price, available)
+                VALUES (gen_random_uuid(), $1, NULL, $2, NULL, true);
+                """,
+                vendor_id,
+                ingredient_id,
+            )
+    else:
+        await execute(
+            "DELETE FROM vendor_items WHERE vendor_id = $1 AND ingredient_id = $2;",
+            vendor_id,
+            ingredient_id,
+        )
+
+    return {"vendor_id": str(vendor_id), "ingredient_id": str(ingredient_id), "stocked": stocked}
+
+
 async def add_vendor_grocery(
     vendor_id: UUID,
     *,
