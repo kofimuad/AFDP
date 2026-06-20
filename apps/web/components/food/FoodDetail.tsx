@@ -181,17 +181,6 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
         </div>
 
         <div className="space-y-6 p-5 md:p-7">
-          {/* Recipe video / links */}
-          {food.recipe_links.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="display-font flex items-center gap-2 text-lg font-bold text-[var(--color-text-primary)]">
-                <PlayCircle size={18} className="text-[var(--color-primary)]" />
-                Watch the recipe
-              </h3>
-              <RecipeLinks links={food.recipe_links} dishName={food.name} />
-            </div>
-          )}
-
           {/* Time stats */}
           {(prep != null || cook != null) && (
             <div className="grid grid-cols-3 gap-3">
@@ -207,9 +196,20 @@ export function FoodDetail({ food, similar, activeVendorId, onVendorSelect }: Fo
             </p>
           )}
 
-          {/* Shopping list — which nearby stores stock each ingredient */}
+          {/* Shopping list — gather ingredients first (SCRUM-46: renders before the recipe video) */}
           {food.ingredients.length > 0 && (
             <IngredientStoreFinder slug={food.slug} ingredients={food.ingredients} />
+          )}
+
+          {/* Recipe video / links — watch after gathering ingredients */}
+          {food.recipe_links.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="display-font flex items-center gap-2 text-lg font-bold text-[var(--color-text-primary)]">
+                <PlayCircle size={18} className="text-[var(--color-primary)]" />
+                Watch the recipe
+              </h3>
+              <RecipeLinks links={food.recipe_links} dishName={food.name} />
+            </div>
           )}
 
           {/* Save + add to shopping list */}
