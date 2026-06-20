@@ -2,7 +2,9 @@
 
 import {
   AlertTriangle,
+  Check,
   LayoutDashboard,
+  Lightbulb,
   type LucideIcon,
   MapPin,
   Pencil,
@@ -13,7 +15,8 @@ import {
   Store,
   Trash2,
   Users as UsersIcon,
-  Utensils
+  Utensils,
+  X
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import Map, { Marker, NavigationControl } from "react-map-gl";
@@ -21,10 +24,13 @@ import Map, { Marker, NavigationControl } from "react-map-gl";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { Badge } from "@/components/ui/Badge";
 import {
+  adminAcceptFoodSuggestion,
   adminCreateFood,
+  adminDeclineFoodSuggestion,
   adminDeleteFood,
   adminDeleteVendor,
   adminListFoods,
+  adminListFoodSuggestions,
   adminListUsers,
   adminListVendors,
   adminUpdateFood,
@@ -45,6 +51,7 @@ import {
   type AdminTotals,
   type AdminUser,
   type AdminVendor,
+  type FoodSuggestion,
   type SearchGeoPoint,
   type TopSearch,
   type TopViewed,
@@ -55,13 +62,14 @@ import { cn } from "@/lib/utils";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-type Tab = "overview" | "demand" | "vendors" | "foods" | "users";
+type Tab = "overview" | "demand" | "vendors" | "foods" | "suggestions" | "users";
 
 const NAV: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "demand", label: "Demand Map", icon: MapPin },
   { id: "vendors", label: "Vendors", icon: Store },
   { id: "foods", label: "Foods", icon: Utensils },
+  { id: "suggestions", label: "Suggestions", icon: Lightbulb },
   { id: "users", label: "Users", icon: UsersIcon }
 ];
 
@@ -130,6 +138,7 @@ function AdminInner() {
           {tab === "demand" && <DemandTab />}
           {tab === "vendors" && <VendorsTab showToast={showToast} />}
           {tab === "foods" && <FoodsTab showToast={showToast} />}
+          {tab === "suggestions" && <SuggestionsTab showToast={showToast} />}
           {tab === "users" && <UsersTab showToast={showToast} />}
         </div>
       </div>
@@ -925,6 +934,160 @@ function FoodsTab({ showToast }: { showToast: (msg: string, type?: "success" | "
                         >
                           <Trash2 size={14} />
                         </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Suggestions (user-recommended foods moderation) ──────────
+
+const SUGGESTION_FILTERS = ["pending", "accepted", "declined"] as const;
+
+function SuggestionsTab({ showToast }: { showToast: (msg: string, type?: "success" | "error") => void }) {
+  const [items, setItems] = useState<FoodSuggestion[]>([]);
+  const [status, setStatus] = useState<(typeof SUGGESTION_FILTERS)[number]>("pending");
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const reload = async (next = status) => {
+    setLoading(true);
+    try {
+      setItems(await adminListFoodSuggestions(next));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    reload(status);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  const act = async (id: string, fn: () => Promise<unknown>, ok: string) => {
+    setBusyId(id);
+    try {
+      await fn();
+      showToast(ok, "success");
+      await reload();
+    } catch (e) {
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      showToast(detail ?? "Action failed", "error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Status filter */}
+      <div className="inline-flex rounded-full bg-[var(--color-surface-hover)] p-1">
+        {SUGGESTION_FILTERS.map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setStatus(key)}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-sm font-semibold capitalize transition",
+              status === key
+                ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-[var(--shadow-sm)]"
+                : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+            )}
+          >
+            {key}
+          </button>
+        ))}
+      </div>
+
+      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-[var(--color-surface-hover)]">
+              <tr className="text-left text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
+                <th className="px-4 py-3">Dish</th>
+                <th className="px-4 py-3">Region</th>
+                <th className="px-4 py-3">Suggested by</th>
+                <th className="px-4 py-3">Recipe</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-surface)]">
+              {loading ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--color-text-muted)]">Loading…</td></tr>
+              ) : items.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--color-text-muted)]">
+                  {status === "pending" ? "No suggestions awaiting review 🎉" : `No ${status} suggestions.`}
+                </td></tr>
+              ) : (
+                items.map((s) => (
+                  <tr key={s.id} className={cn(busyId === s.id && "opacity-50")}>
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-[var(--color-text-primary)]">{s.name}</div>
+                      {s.description && (
+                        <div className="max-w-xs truncate text-xs text-[var(--color-text-muted)]">{s.description}</div>
+                      )}
+                      {s.note && (
+                        <div className="mt-0.5 max-w-xs truncate text-xs italic text-[var(--color-text-muted)]">“{s.note}”</div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-text-muted)]">{s.region ?? "—"}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">{s.suggested_by_email ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      {s.recipe_link ? (
+                        <a href={s.recipe_link} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline">
+                          link
+                        </a>
+                      ) : (
+                        <span className="text-[var(--color-text-muted)]">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                        {s.status === "pending" ? (
+                          <>
+                            <button
+                              type="button"
+                              disabled={busyId === s.id}
+                              onClick={() => act(s.id, () => adminAcceptFoodSuggestion(s.id), "Suggestion accepted — food added")}
+                              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                            >
+                              <Check size={12} />
+                              Accept
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busyId === s.id}
+                              onClick={() => act(s.id, () => adminDeclineFoodSuggestion(s.id), "Suggestion declined")}
+                              className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-error)] transition hover:bg-[var(--color-error-light)] disabled:opacity-50"
+                            >
+                              <X size={12} />
+                              Decline
+                            </button>
+                          </>
+                        ) : s.status === "accepted" ? (
+                          s.created_food_slug ? (
+                            <a
+                              href={`/foods/${s.created_food_slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
+                            >
+                              <Utensils size={12} />
+                              View food
+                            </a>
+                          ) : (
+                            <Badge variant="success">Accepted</Badge>
+                          )
+                        ) : (
+                          <Badge variant="neutral">Declined</Badge>
+                        )}
                       </div>
                     </td>
                   </tr>
