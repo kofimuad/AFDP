@@ -173,7 +173,7 @@ function KpiCard({
         </span>
       </div>
       <p className="display-font mt-2 text-3xl font-extrabold text-[var(--color-text-primary)]">
-        {value.toLocaleString()}
+        {(value ?? 0).toLocaleString()}
       </p>
       {hint && (
         <p className={cn("mt-1 text-xs", warn ? "font-medium text-[var(--color-warning)]" : "text-[var(--color-text-muted)]")}>
@@ -213,7 +213,7 @@ function ListCard({
                   {r.label}
                 </span>
               </span>
-              <span className="shrink-0 font-semibold text-[var(--color-text-primary)]">{r.value.toLocaleString()}</span>
+              <span className="shrink-0 font-semibold text-[var(--color-text-primary)]">{(r.value ?? 0).toLocaleString()}</span>
             </li>
           ))}
         </ul>
