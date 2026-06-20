@@ -658,6 +658,11 @@ export const adminDeleteFood = async (slug: string): Promise<void> => {
 
 // --- FOOD SUGGESTIONS (recommend a dish + admin moderation) ---
 
+export interface SuggestionIngredient {
+  name: string
+  quantity_note?: string | null
+}
+
 export interface FoodSuggestion {
   id: string
   name: string
@@ -666,6 +671,7 @@ export interface FoodSuggestion {
   image_url: string | null
   recipe_link: string | null
   note: string | null
+  ingredients: SuggestionIngredient[]
   status: 'pending' | 'accepted' | 'declined'
   suggested_by_email: string | null
   created_food_slug: string | null
@@ -680,6 +686,7 @@ export interface FoodSuggestionInput {
   image_url?: string | null
   recipe_link?: string | null
   note?: string | null
+  ingredients?: SuggestionIngredient[]
 }
 
 export const submitFoodSuggestion = async (input: FoodSuggestionInput): Promise<FoodSuggestion> => {
@@ -696,6 +703,14 @@ export const adminListFoodSuggestions = async (
   status: 'pending' | 'accepted' | 'declined' = 'pending'
 ): Promise<FoodSuggestion[]> => {
   const { data } = await api.get<FoodSuggestion[]>('/admin/manage/food-suggestions', { params: { status } })
+  return data
+}
+
+export const adminUpdateFoodSuggestion = async (
+  id: string,
+  input: Partial<FoodSuggestionInput>
+): Promise<FoodSuggestion> => {
+  const { data } = await api.patch<FoodSuggestion>(`/admin/manage/food-suggestions/${id}`, input)
   return data
 }
 

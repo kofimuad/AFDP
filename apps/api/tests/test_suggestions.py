@@ -35,12 +35,19 @@ async def test_suggestion_submit_then_admin_accept_creates_food(client) -> None:
             "region": "West African",
             "recipe_link": "https://www.youtube.com/watch?v=abc",
             "note": "Please add this!",
+            "ingredients": [
+                {"name": "Egusi seeds", "quantity_note": "2 cups"},
+                {"name": "Palm oil", "quantity_note": "to taste"},
+                {"name": "", "quantity_note": "ignored blank"},
+            ],
         },
         headers=user_h,
     )
     assert res.status_code == 201, res.text
     sug = res.json()
     assert sug["status"] == "pending"
+    # Blank ingredient lines are dropped.
+    assert [i["name"] for i in sug["ingredients"]] == ["Egusi seeds", "Palm oil"]
     sid = sug["id"]
 
     # Submitter sees it in their list.
@@ -52,13 +59,29 @@ async def test_suggestion_submit_then_admin_accept_creates_food(client) -> None:
     queue = await client.get("/api/v1/admin/manage/food-suggestions?status=pending", headers=admin_h)
     assert any(s["id"] == sid for s in queue.json())
 
+    # Admin edits the ingredient list before accepting.
+    edit = await client.patch(
+        f"/api/v1/admin/manage/food-suggestions/{sid}",
+        json={"ingredients": [
+            {"name": "Egusi seeds", "quantity_note": "2 cups"},
+            {"name": "Spinach", "quantity_note": "1 bunch"},
+        ]},
+        headers=admin_h,
+    )
+    assert edit.status_code == 200, edit.text
+    assert {i["name"] for i in edit.json()["ingredients"]} == {"Egusi seeds", "Spinach"}
+
     # Accept → creates the catalog food.
     acc = await client.patch(f"/api/v1/admin/manage/food-suggestions/{sid}/accept", headers=admin_h)
     assert acc.status_code == 200, acc.text
     assert acc.json()["status"] == "accepted"
     slug = acc.json()["created_food_slug"]
     assert slug
-    assert (await client.get(f"/api/v1/foods/{slug}")).status_code == 200
+    detail = await client.get(f"/api/v1/foods/{slug}")
+    assert detail.status_code == 200
+    # Edited ingredients carried onto the catalog food.
+    names = {i["ingredient"]["name"] for i in detail.json()["ingredients"]}
+    assert {"Egusi seeds", "Spinach"} <= names
 
     # Re-reviewing is rejected.
     assert (await client.patch(f"/api/v1/admin/manage/food-suggestions/{sid}/accept", headers=admin_h)).status_code == 409
