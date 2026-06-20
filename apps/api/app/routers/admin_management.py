@@ -18,8 +18,10 @@ from app.services.admin_management_service import (
     update_user_role,
     update_vendor_plan,
 )
+from app.schemas.admin import AdminStatsResponse
 from app.schemas.food import AdminFoodOut, FoodCreateIn, FoodDetailOut, FoodUpdateIn
 from app.schemas.recipe import RecipeCreate
+from app.services.admin_service import get_admin_stats
 from app.services.auth_service import require_admin
 from app.services.food_service import create_recipe
 from app.services.vendor_service import (
@@ -47,6 +49,16 @@ class PlanUpdate(BaseModel):
 class DeliveryUpdate(BaseModel):
     # Tri-state: true (delivers), false (no delivery), null (unknown).
     delivery_available: bool | None = None
+
+
+@router.get("/stats", response_model=AdminStatsResponse)
+async def platform_stats_route(_: dict = Depends(require_admin)) -> AdminStatsResponse:
+    """Platform totals (vendor breakdown + catalog size) for the admin dashboard.
+
+    JWT-guarded mirror of /admin/stats (which is X-Admin-Key / ops-only), so the
+    dashboard can surface the data without a static server key in the browser.
+    """
+    return AdminStatsResponse.model_validate(await get_admin_stats())
 
 
 @router.get("/users")

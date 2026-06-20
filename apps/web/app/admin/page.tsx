@@ -2,7 +2,6 @@
 
 import {
   AlertTriangle,
-  BarChart3,
   LayoutDashboard,
   type LucideIcon,
   MapPin,
@@ -35,12 +34,14 @@ import {
   adminUpdateUserRole,
   adminUpdateVendorPlan,
   adminVerifyVendor,
+  getAdminPlatformStats,
   getAdminTotals,
   getSearchGeo,
   getTopSearches,
   getTopViewed,
   getZeroResultSearches,
   type AdminFood,
+  type AdminPlatformStats,
   type AdminTotals,
   type AdminUser,
   type AdminVendor,
@@ -184,6 +185,17 @@ function KpiCard({
   );
 }
 
+// ── Mini stat ────────────────────────────────────────────────
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 shadow-[var(--shadow-sm)]">
+      <p className="display-font text-xl font-extrabold text-[var(--color-text-primary)]">{(value ?? 0).toLocaleString()}</p>
+      <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">{label}</p>
+    </div>
+  );
+}
+
 // ── List card ────────────────────────────────────────────────
 
 function ListCard({
@@ -226,9 +238,11 @@ function ListCard({
 
 function OverviewTab({ onGoToVendors }: { onGoToVendors: () => void }) {
   const [totals, setTotals] = useState<AdminTotals | null>(null);
+  const [platform, setPlatform] = useState<AdminPlatformStats | null>(null);
   const [top, setTop] = useState<TopSearch[]>([]);
   const [zero, setZero] = useState<ZeroResultSearch[]>([]);
   const [topVendors, setTopVendors] = useState<TopViewed[]>([]);
+  const [topFoods, setTopFoods] = useState<TopViewed[]>([]);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -236,18 +250,22 @@ function OverviewTab({ onGoToVendors }: { onGoToVendors: () => void }) {
     let cancel = false;
     (async () => {
       try {
-        const [t, s, z, tv, pending] = await Promise.all([
+        const [t, p, s, z, tv, tf, pending] = await Promise.all([
           getAdminTotals(),
+          getAdminPlatformStats(),
           getTopSearches(30, 8),
           getZeroResultSearches(30, 8),
           getTopViewed("vendor", 30, 8),
+          getTopViewed("food", 30, 8),
           adminListVendors({ page_size: 200 })
         ]);
         if (cancel) return;
         setTotals(t);
+        setPlatform(p);
         setTop(s);
         setZero(z);
         setTopVendors(tv);
+        setTopFoods(tf);
         setPendingCount(pending.filter((v) => !v.is_verified).length);
       } finally {
         if (!cancel) setLoading(false);
@@ -302,6 +320,15 @@ function OverviewTab({ onGoToVendors }: { onGoToVendors: () => void }) {
         </button>
       )}
 
+      {/* Platform breakdown (/admin/stats) + engagement */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <MiniStat label="Restaurants" value={platform?.total_restaurants ?? 0} />
+        <MiniStat label="Grocery stores" value={platform?.total_grocery_stores ?? 0} />
+        <MiniStat label="Dishes" value={platform?.total_foods ?? 0} />
+        <MiniStat label="Ingredients" value={platform?.total_ingredients ?? 0} />
+        <MiniStat label="Profile/dish views" value={totals?.total_views ?? 0} />
+      </div>
+
       {/* Insight lists */}
       <div className="grid gap-4 md:grid-cols-2">
         <ListCard
@@ -320,11 +347,11 @@ function OverviewTab({ onGoToVendors }: { onGoToVendors: () => void }) {
           subtitle="Last 30 days"
           rows={topVendors.map((r) => ({ label: r.name ?? r.entity_id, value: r.count }))}
         />
-        <div className="flex flex-col justify-center gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center shadow-[var(--shadow-sm)]">
-          <BarChart3 size={22} className="mx-auto text-[var(--color-text-muted)]" />
-          <p className="text-sm font-semibold text-[var(--color-text-primary)]">{(totals?.total_views ?? 0).toLocaleString()} total profile/dish views</p>
-          <p className="text-xs text-[var(--color-text-muted)]">Open the Demand Map to see where searches cluster.</p>
-        </div>
+        <ListCard
+          title="Most-viewed dishes"
+          subtitle="Last 30 days"
+          rows={topFoods.map((r) => ({ label: r.name ?? r.entity_id, value: r.count }))}
+        />
       </div>
     </div>
   );
