@@ -239,29 +239,56 @@ async def create_recipe(payload: RecipeCreate) -> dict[str, Any]:
         )
 
     for ing in payload.ingredients:
-        ingredient = await fetchrow(
-            "INSERT INTO ingredients (id, name, slug) VALUES (gen_random_uuid(), $1, $2) "
-            "ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name RETURNING id;",
-            ing.name,
-            slugify(ing.name),
-        )
-        await execute(
-            """
-            INSERT INTO food_ingredients (food_id, ingredient_id, quantity_note, quantity, unit)
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (food_id, ingredient_id) DO UPDATE SET
-                quantity_note = EXCLUDED.quantity_note,
-                quantity = EXCLUDED.quantity,
-                unit = EXCLUDED.unit;
-            """,
+        await link_food_ingredient(
             food_id,
-            ingredient["id"],
-            ing.quantity_note,
-            ing.quantity,
-            ing.unit,
+            ing.name,
+            quantity_note=ing.quantity_note,
+            quantity=ing.quantity,
+            unit=ing.unit,
         )
 
     return await get_food_detail(slug)
+
+
+async def link_food_ingredient(
+    food_id: Any,
+    name: str,
+    *,
+    quantity_note: str | None = None,
+    quantity: float | None = None,
+    unit: str | None = None,
+) -> None:
+    """Attach an ingredient (matched/created by name) to a food.
+
+    Shared by the admin recipe path and the food-suggestion accept path so
+    ingredient creation and the food_ingredients upsert behave identically.
+    Blank names are skipped.
+    """
+
+    name = (name or "").strip()
+    if not name:
+        return
+    ingredient = await fetchrow(
+        "INSERT INTO ingredients (id, name, slug) VALUES (gen_random_uuid(), $1, $2) "
+        "ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name RETURNING id;",
+        name,
+        slugify(name),
+    )
+    await execute(
+        """
+        INSERT INTO food_ingredients (food_id, ingredient_id, quantity_note, quantity, unit)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (food_id, ingredient_id) DO UPDATE SET
+            quantity_note = EXCLUDED.quantity_note,
+            quantity = EXCLUDED.quantity,
+            unit = EXCLUDED.unit;
+        """,
+        food_id,
+        ingredient["id"],
+        quantity_note,
+        quantity,
+        unit,
+    )
 
 
 async def find_ingredient_stores_for_food(

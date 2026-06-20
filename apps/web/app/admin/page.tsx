@@ -18,7 +18,7 @@ import {
   Utensils,
   X
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Map, { Marker, NavigationControl } from "react-map-gl";
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -34,6 +34,7 @@ import {
   adminListUsers,
   adminListVendors,
   adminUpdateFood,
+  adminUpdateFoodSuggestion,
   adminSetUserActive,
   adminSetVendorDelivery,
   adminToggleVendorFeature,
@@ -52,6 +53,7 @@ import {
   type AdminUser,
   type AdminVendor,
   type FoodSuggestion,
+  type SuggestionIngredient,
   type SearchGeoPoint,
   type TopSearch,
   type TopViewed,
@@ -951,11 +953,16 @@ function FoodsTab({ showToast }: { showToast: (msg: string, type?: "success" | "
 
 const SUGGESTION_FILTERS = ["pending", "accepted", "declined"] as const;
 
+const EMPTY_SUG_ING: SuggestionIngredient = { name: "", quantity_note: "" };
+
 function SuggestionsTab({ showToast }: { showToast: (msg: string, type?: "success" | "error") => void }) {
   const [items, setItems] = useState<FoodSuggestion[]>([]);
   const [status, setStatus] = useState<(typeof SUGGESTION_FILTERS)[number]>("pending");
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // The suggestion whose ingredients are being edited, plus the working draft.
+  const [editId, setEditId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<SuggestionIngredient[]>([]);
 
   const reload = async (next = status) => {
     setLoading(true);
@@ -980,6 +987,29 @@ function SuggestionsTab({ showToast }: { showToast: (msg: string, type?: "succes
     } catch (e) {
       const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       showToast(detail ?? "Action failed", "error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const startEdit = (s: FoodSuggestion) => {
+    setEditId(s.id);
+    setDraft(s.ingredients.length ? s.ingredients.map((i) => ({ ...i })) : [{ ...EMPTY_SUG_ING }]);
+  };
+
+  const saveIngredients = async (id: string) => {
+    const cleaned = draft
+      .map((i) => ({ name: i.name.trim(), quantity_note: (i.quantity_note ?? "").trim() || null }))
+      .filter((i) => i.name);
+    setBusyId(id);
+    try {
+      await adminUpdateFoodSuggestion(id, { ingredients: cleaned });
+      showToast("Ingredients saved", "success");
+      setEditId(null);
+      await reload();
+    } catch (e) {
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      showToast(detail ?? "Save failed", "error");
     } finally {
       setBusyId(null);
     }
@@ -1027,70 +1057,153 @@ function SuggestionsTab({ showToast }: { showToast: (msg: string, type?: "succes
                 </td></tr>
               ) : (
                 items.map((s) => (
-                  <tr key={s.id} className={cn(busyId === s.id && "opacity-50")}>
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-[var(--color-text-primary)]">{s.name}</div>
-                      {s.description && (
-                        <div className="max-w-xs truncate text-xs text-[var(--color-text-muted)]">{s.description}</div>
-                      )}
-                      {s.note && (
-                        <div className="mt-0.5 max-w-xs truncate text-xs italic text-[var(--color-text-muted)]">“{s.note}”</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--color-text-muted)]">{s.region ?? "—"}</td>
-                    <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">{s.suggested_by_email ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      {s.recipe_link ? (
-                        <a href={s.recipe_link} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline">
-                          link
-                        </a>
-                      ) : (
-                        <span className="text-[var(--color-text-muted)]">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-                        {s.status === "pending" ? (
-                          <>
-                            <button
-                              type="button"
-                              disabled={busyId === s.id}
-                              onClick={() => act(s.id, () => adminAcceptFoodSuggestion(s.id), "Suggestion accepted — food added")}
-                              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-                            >
-                              <Check size={12} />
-                              Accept
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busyId === s.id}
-                              onClick={() => act(s.id, () => adminDeclineFoodSuggestion(s.id), "Suggestion declined")}
-                              className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-error)] transition hover:bg-[var(--color-error-light)] disabled:opacity-50"
-                            >
-                              <X size={12} />
-                              Decline
-                            </button>
-                          </>
-                        ) : s.status === "accepted" ? (
-                          s.created_food_slug ? (
-                            <a
-                              href={`/foods/${s.created_food_slug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
-                            >
-                              <Utensils size={12} />
-                              View food
-                            </a>
-                          ) : (
-                            <Badge variant="success">Accepted</Badge>
-                          )
-                        ) : (
-                          <Badge variant="neutral">Declined</Badge>
+                  <Fragment key={s.id}>
+                    <tr className={cn(busyId === s.id && "opacity-50", editId === s.id && "border-0")}>
+                      <td className="px-4 py-3 align-top">
+                        <div className="font-semibold text-[var(--color-text-primary)]">{s.name}</div>
+                        {s.description && (
+                          <div className="max-w-xs truncate text-xs text-[var(--color-text-muted)]">{s.description}</div>
                         )}
-                      </div>
-                    </td>
-                  </tr>
+                        {s.note && (
+                          <div className="mt-0.5 max-w-xs truncate text-xs italic text-[var(--color-text-muted)]">“{s.note}”</div>
+                        )}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          {s.ingredients.length > 0 ? (
+                            <span className="text-xs text-[var(--color-text-muted)]">
+                              {s.ingredients.length} ingredient{s.ingredients.length === 1 ? "" : "s"}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-[var(--color-text-muted)]">No ingredients</span>
+                          )}
+                          {s.status === "pending" && (
+                            <button
+                              type="button"
+                              onClick={() => (editId === s.id ? setEditId(null) : startEdit(s))}
+                              className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
+                            >
+                              <Pencil size={10} />
+                              {editId === s.id ? "Close" : "Edit"}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-[var(--color-text-muted)]">{s.region ?? "—"}</td>
+                      <td className="px-4 py-3 align-top text-xs text-[var(--color-text-muted)]">{s.suggested_by_email ?? "—"}</td>
+                      <td className="px-4 py-3 align-top">
+                        {s.recipe_link ? (
+                          <a href={s.recipe_link} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline">
+                            link
+                          </a>
+                        ) : (
+                          <span className="text-[var(--color-text-muted)]">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                          {s.status === "pending" ? (
+                            <>
+                              <button
+                                type="button"
+                                disabled={busyId === s.id}
+                                onClick={() => act(s.id, () => adminAcceptFoodSuggestion(s.id), "Suggestion accepted — food added")}
+                                className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                              >
+                                <Check size={12} />
+                                Accept
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busyId === s.id}
+                                onClick={() => act(s.id, () => adminDeclineFoodSuggestion(s.id), "Suggestion declined")}
+                                className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-error)] transition hover:bg-[var(--color-error-light)] disabled:opacity-50"
+                              >
+                                <X size={12} />
+                                Decline
+                              </button>
+                            </>
+                          ) : s.status === "accepted" ? (
+                            s.created_food_slug ? (
+                              <a
+                                href={`/foods/${s.created_food_slug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
+                              >
+                                <Utensils size={12} />
+                                View food
+                              </a>
+                            ) : (
+                              <Badge variant="success">Accepted</Badge>
+                            )
+                          ) : (
+                            <Badge variant="neutral">Declined</Badge>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {editId === s.id && (
+                      <tr className={cn(busyId === s.id && "opacity-50")}>
+                        <td colSpan={5} className="bg-[var(--color-surface-hover)] px-4 py-4">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                            Ingredients — added to the dish on accept
+                          </p>
+                          <div className="space-y-2">
+                            {draft.map((ing, i) => (
+                              <div key={i} className="flex items-center gap-2">
+                                <input
+                                  className="flex-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
+                                  value={ing.name}
+                                  placeholder="Ingredient"
+                                  onChange={(e) => setDraft((d) => d.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
+                                />
+                                <input
+                                  className="w-32 shrink-0 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
+                                  value={ing.quantity_note ?? ""}
+                                  placeholder="Amount"
+                                  onChange={(e) => setDraft((d) => d.map((x, j) => (j === i ? { ...x, quantity_note: e.target.value } : x)))}
+                                />
+                                <button
+                                  type="button"
+                                  aria-label="Remove ingredient"
+                                  onClick={() => setDraft((d) => (d.length === 1 ? [{ ...EMPTY_SUG_ING }] : d.filter((_, j) => j !== i)))}
+                                  className="shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-[var(--color-text-muted)] transition hover:text-[var(--color-error)]"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setDraft((d) => [...d, { ...EMPTY_SUG_ING }])}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface)]"
+                            >
+                              <Plus size={14} />
+                              Add ingredient
+                            </button>
+                            <div className="ml-auto flex gap-2">
+                              <button
+                                type="button"
+                                disabled={busyId === s.id}
+                                onClick={() => saveIngredients(s.id)}
+                                className="rounded-full bg-[var(--color-primary)] px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+                              >
+                                Save ingredients
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditId(null)}
+                                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface)]"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))
               )}
             </tbody>

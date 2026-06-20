@@ -1,14 +1,15 @@
 "use client";
 
-import { Check, ChefHat, Loader2 } from "lucide-react";
+import { Check, ChefHat, Loader2, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import { submitFoodSuggestion } from "@/lib/api";
+import { submitFoodSuggestion, type SuggestionIngredient } from "@/lib/api";
 import { useToast } from "@/lib/store/toastStore";
 
 const EMPTY = { name: "", region: "", description: "", recipe_link: "", image_url: "", note: "" };
+const EMPTY_ING: SuggestionIngredient = { name: "", quantity_note: "" };
 const FIELD =
   "w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
 
@@ -24,11 +25,22 @@ const REGIONS = [
 function RecommendForm() {
   const { showToast } = useToast();
   const [form, setForm] = useState(EMPTY);
+  const [ingredients, setIngredients] = useState<SuggestionIngredient[]>([{ ...EMPTY_ING }]);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
   function set<K extends keyof typeof EMPTY>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function setIngredient(index: number, key: keyof SuggestionIngredient, value: string) {
+    setIngredients((list) => list.map((ing, i) => (i === index ? { ...ing, [key]: value } : ing)));
+  }
+  function addIngredient() {
+    setIngredients((list) => [...list, { ...EMPTY_ING }]);
+  }
+  function removeIngredient(index: number) {
+    setIngredients((list) => (list.length === 1 ? [{ ...EMPTY_ING }] : list.filter((_, i) => i !== index)));
   }
 
   async function submit(e: React.FormEvent) {
@@ -39,13 +51,17 @@ function RecommendForm() {
     }
     setBusy(true);
     try {
+      const cleanedIngredients = ingredients
+        .map((ing) => ({ name: ing.name.trim(), quantity_note: (ing.quantity_note ?? "").trim() || null }))
+        .filter((ing) => ing.name);
       await submitFoodSuggestion({
         name: form.name.trim(),
         region: form.region.trim() || null,
         description: form.description.trim() || null,
         recipe_link: form.recipe_link.trim() || null,
         image_url: form.image_url.trim() || null,
-        note: form.note.trim() || null
+        note: form.note.trim() || null,
+        ingredients: cleanedIngredients
       });
       setDone(true);
     } catch (e) {
@@ -73,6 +89,7 @@ function RecommendForm() {
             type="button"
             onClick={() => {
               setForm(EMPTY);
+              setIngredients([{ ...EMPTY_ING }]);
               setDone(false);
             }}
             className="rounded-full bg-[var(--color-grocery)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-95"
@@ -125,6 +142,45 @@ function RecommendForm() {
           placeholder="What is it? A sentence or two."
         />
       </label>
+
+      <div className="text-sm">
+        <span className="mb-1 block font-medium text-[var(--color-text-primary)]">Ingredients (optional)</span>
+        <p className="mb-2 text-xs text-[var(--color-text-muted)]">List what goes into the dish. Amounts can be free-form — “2 cups”, “a handful”, “to taste”.</p>
+        <div className="space-y-2">
+          {ingredients.map((ing, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                className={`${FIELD} flex-1`}
+                value={ing.name}
+                onChange={(e) => setIngredient(i, "name", e.target.value)}
+                placeholder="Ingredient, e.g. Egusi seeds"
+              />
+              <input
+                className={`${FIELD} w-32 shrink-0`}
+                value={ing.quantity_note ?? ""}
+                onChange={(e) => setIngredient(i, "quantity_note", e.target.value)}
+                placeholder="Amount"
+              />
+              <button
+                type="button"
+                onClick={() => removeIngredient(i)}
+                aria-label="Remove ingredient"
+                className="shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-error)]"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={addIngredient}
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
+        >
+          <Plus size={14} />
+          Add ingredient
+        </button>
+      </div>
 
       <label className="block text-sm">
         <span className="mb-1 block font-medium text-[var(--color-text-primary)]">Image URL (optional)</span>

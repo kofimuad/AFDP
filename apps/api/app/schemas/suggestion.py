@@ -1,7 +1,19 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class SuggestionIngredient(BaseModel):
+    """A single ingredient line on a food suggestion.
+
+    Free-text by design: a user typing "2 cups" or "to taste" shouldn't be
+    forced into structured numbers. The amount becomes the food_ingredients
+    quantity_note when the suggestion is accepted.
+    """
+
+    name: str
+    quantity_note: str | None = None
 
 
 class FoodSuggestionCreate(BaseModel):
@@ -13,6 +25,23 @@ class FoodSuggestionCreate(BaseModel):
     image_url: str | None = None
     recipe_link: str | None = None
     note: str | None = None
+    ingredients: list[SuggestionIngredient] = Field(default_factory=list)
+
+
+class FoodSuggestionUpdate(BaseModel):
+    """Admin edits to a pending suggestion before accepting/declining it.
+
+    All fields optional — only what's provided is changed. ``ingredients`` is
+    replaced wholesale when present (None leaves the existing list untouched).
+    """
+
+    name: str | None = None
+    description: str | None = None
+    region: str | None = None
+    image_url: str | None = None
+    recipe_link: str | None = None
+    note: str | None = None
+    ingredients: list[SuggestionIngredient] | None = None
 
 
 class FoodSuggestionOut(BaseModel):
@@ -25,6 +54,7 @@ class FoodSuggestionOut(BaseModel):
     image_url: str | None = None
     recipe_link: str | None = None
     note: str | None = None
+    ingredients: list[SuggestionIngredient] = Field(default_factory=list)
     status: str
     suggested_by_email: str | None = None
     created_food_slug: str | None = None
