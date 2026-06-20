@@ -515,6 +515,20 @@ export const getTopViewed = async (entityType: 'vendor' | 'food' | 'ingredient',
   return data
 }
 
+export interface AdminPlatformStats {
+  total_vendors: number
+  total_restaurants: number
+  total_grocery_stores: number
+  total_foods: number
+  total_ingredients: number
+  total_searches: number
+}
+
+export const getAdminPlatformStats = async (): Promise<AdminPlatformStats> => {
+  const { data } = await api.get<AdminPlatformStats>('/admin/manage/stats')
+  return data
+}
+
 // --- ADMIN MANAGEMENT ---
 
 export interface AdminUser {

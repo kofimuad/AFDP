@@ -130,6 +130,35 @@ async def test_admin_food_crud(client) -> None:
 
 
 @pytest.mark.asyncio
+async def test_admin_platform_stats(client) -> None:
+    headers = await _admin_headers(client)
+    res = await client.get("/api/v1/admin/manage/stats", headers=headers)
+    assert res.status_code == 200, res.text
+    body = res.json()
+    for key in (
+        "total_vendors",
+        "total_restaurants",
+        "total_grocery_stores",
+        "total_foods",
+        "total_ingredients",
+        "total_searches",
+    ):
+        assert isinstance(body[key], int)
+    # Vendor type breakdown sums to the total.
+    assert body["total_restaurants"] + body["total_grocery_stores"] == body["total_vendors"]
+
+
+@pytest.mark.asyncio
+async def test_admin_platform_stats_requires_admin(client) -> None:
+    reg = await client.post(
+        "/api/v1/auth/register",
+        json={"email": f"u-{uuid.uuid4().hex[:10]}@example.com", "full_name": "Plain User", "password": "password123"},
+    )
+    headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
+    assert (await client.get("/api/v1/admin/manage/stats", headers=headers)).status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_admin_food_endpoints_require_admin(client) -> None:
     reg = await client.post(
         "/api/v1/auth/register",
