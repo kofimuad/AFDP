@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 from uuid import UUID
 
@@ -10,6 +11,7 @@ from slugify import slugify
 
 from app.core.database import execute, fetch, fetchrow
 from app.schemas.food import FoodCreateIn, FoodUpdateIn
+from app.services.food_service import link_food_ingredient
 
 ALLOWED_ROLES = {"user", "vendor", "admin"}
 ALLOWED_PLANS = {"basic", "featured", "premium"}
@@ -210,7 +212,13 @@ _ADMIN_FOOD_SELECT = """
         (SELECT r.name FROM food_regions fr JOIN regions r ON r.id = fr.region_id
          WHERE fr.food_id = f.id ORDER BY r.name LIMIT 1) AS region,
         (SELECT rl.url FROM recipe_links rl WHERE rl.food_id = f.id
-         ORDER BY rl.is_primary DESC, rl.created_at ASC LIMIT 1) AS recipe_link
+         ORDER BY rl.is_primary DESC, rl.created_at ASC LIMIT 1) AS recipe_link,
+        (SELECT COALESCE(
+            json_agg(json_build_object('name', i.name, 'quantity_note', fi.quantity_note)
+                     ORDER BY i.name),
+            '[]')
+         FROM food_ingredients fi JOIN ingredients i ON i.id = fi.ingredient_id
+         WHERE fi.food_id = f.id) AS ingredients
     FROM foods f
 """
 
@@ -218,6 +226,18 @@ _ADMIN_FOOD_SELECT = """
 def _detect_source_type(url: str) -> str:
     u = url.lower()
     return "youtube" if ("youtube.com" in u or "youtu.be" in u) else "article"
+
+
+def _parse_food_ingredients(raw: Any) -> list[dict[str, Any]]:
+    """json_agg returns a JSON string (no asyncpg codec registered)."""
+    if not raw:
+        return []
+    data = json.loads(raw) if isinstance(raw, str) else raw
+    return [
+        {"name": item.get("name"), "quantity_note": item.get("quantity_note")}
+        for item in data
+        if isinstance(item, dict) and item.get("name")
+    ]
 
 
 def _admin_food_payload(row: Any) -> dict[str, Any]:
@@ -229,6 +249,7 @@ def _admin_food_payload(row: Any) -> dict[str, Any]:
         "region": row["region"],
         "image_url": row["image_url"],
         "recipe_link": row["recipe_link"],
+        "ingredients": _parse_food_ingredients(row["ingredients"]),
         "created_at": row["created_at"],
     }
 
@@ -251,6 +272,19 @@ async def _set_food_region(food_id: UUID, region_name: str | None) -> None:
         food_id,
         region["id"],
     )
+
+
+async def _replace_food_ingredients(food_id: UUID, ingredients: list[Any], replace: bool = False) -> None:
+    """Attach the given ingredient lines to a food.
+
+    With ``replace=True`` the food's existing ingredients are cleared first, so an
+    admin edit reflects exactly the list on the form (adds, edits, and removals).
+    Each line is matched/created by name via the shared food_service helper.
+    """
+    if replace:
+        await execute("DELETE FROM food_ingredients WHERE food_id = $1;", food_id)
+    for ing in ingredients:
+        await link_food_ingredient(food_id, ing.name, quantity_note=ing.quantity_note)
 
 
 async def _set_food_primary_recipe_link(food_id: UUID, food_name: str, url: str | None) -> None:
@@ -315,6 +349,7 @@ async def create_food_admin(payload: FoodCreateIn) -> dict[str, Any]:
     )
     await _set_food_region(food["id"], payload.region)
     await _set_food_primary_recipe_link(food["id"], name, payload.recipe_link)
+    await _replace_food_ingredients(food["id"], payload.ingredients)
     return await get_admin_food(slug)  # type: ignore[return-value]
 
 
@@ -339,6 +374,8 @@ async def update_food_admin(slug: str, payload: FoodUpdateIn) -> dict[str, Any]:
     )
     await _set_food_region(food["id"], payload.region)
     await _set_food_primary_recipe_link(food["id"], new_name or food["name"], payload.recipe_link)
+    if payload.ingredients is not None:
+        await _replace_food_ingredients(food["id"], payload.ingredients, replace=True)
     return await get_admin_food(slug)  # type: ignore[return-value]
 
 

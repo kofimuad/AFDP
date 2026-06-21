@@ -98,6 +98,10 @@ async def test_admin_food_crud(client) -> None:
             "region": "West African",
             "image_url": "https://example.com/x.jpg",
             "recipe_link": "https://www.youtube.com/watch?v=abc123",
+            "ingredients": [
+                {"name": "Yam", "quantity_note": "1 tuber"},
+                {"name": "Palm oil", "quantity_note": "to taste"},
+            ],
         },
         headers=headers,
     )
@@ -106,6 +110,7 @@ async def test_admin_food_crud(client) -> None:
     slug = food["slug"]
     assert food["region"] == "West African"
     assert "youtube.com" in food["recipe_link"]
+    assert {i["name"] for i in food["ingredients"]} == {"Yam", "Palm oil"}
 
     # Appears in the admin list and the public catalog
     listed = (await client.get("/api/v1/admin/manage/foods", headers=headers)).json()
@@ -113,16 +118,29 @@ async def test_admin_food_crud(client) -> None:
     public = await client.get(f"/api/v1/foods/{slug}")
     assert public.status_code == 200
     assert any(rl["is_primary"] and rl["source_type"] == "youtube" for rl in public.json()["recipe_links"])
+    assert {i["ingredient"]["name"] for i in public.json()["ingredients"]} == {"Yam", "Palm oil"}
 
-    # Update
+    # Update — the ingredient list is replaced wholesale.
     upd = await client.patch(
         f"/api/v1/admin/manage/foods/{slug}",
-        json={"description": "Updated description.", "region": "East African"},
+        json={
+            "description": "Updated description.",
+            "region": "East African",
+            "ingredients": [{"name": "Cocoyam", "quantity_note": "2 tubers"}],
+        },
         headers=headers,
     )
     assert upd.status_code == 200
     assert upd.json()["description"] == "Updated description."
     assert upd.json()["region"] == "East African"
+    assert [i["name"] for i in upd.json()["ingredients"]] == ["Cocoyam"]
+    # Omitting ingredients leaves them unchanged.
+    upd2 = await client.patch(
+        f"/api/v1/admin/manage/foods/{slug}",
+        json={"description": "Again."},
+        headers=headers,
+    )
+    assert [i["name"] for i in upd2.json()["ingredients"]] == ["Cocoyam"]
 
     # Delete
     assert (await client.delete(f"/api/v1/admin/manage/foods/{slug}", headers=headers)).status_code == 200

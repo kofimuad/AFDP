@@ -735,8 +735,10 @@ function UsersTab({ showToast }: { showToast: (msg: string, type?: "success" | "
 // ── Foods (catalog management, SCRUM-53) ─────────────────────
 
 const EMPTY_FOOD = { name: "", region: "", description: "", image_url: "", recipe_link: "" };
-const FIELD_CLS =
-  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
+const EMPTY_FOOD_ING: SuggestionIngredient = { name: "", quantity_note: "" };
+const FIELD_CLS_BASE =
+  "rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
+const FIELD_CLS = `w-full ${FIELD_CLS_BASE}`;
 
 function FoodsTab({ showToast }: { showToast: (msg: string, type?: "success" | "error") => void }) {
   const [foods, setFoods] = useState<AdminFood[]>([]);
@@ -746,6 +748,7 @@ function FoodsTab({ showToast }: { showToast: (msg: string, type?: "success" | "
   // null = form closed, "new" = creating, otherwise the slug being edited.
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FOOD);
+  const [ings, setIngs] = useState<SuggestionIngredient[]>([{ ...EMPTY_FOOD_ING }]);
 
   const reload = async () => {
     setLoading(true);
@@ -762,6 +765,7 @@ function FoodsTab({ showToast }: { showToast: (msg: string, type?: "success" | "
 
   const openCreate = () => {
     setForm(EMPTY_FOOD);
+    setIngs([{ ...EMPTY_FOOD_ING }]);
     setEditing("new");
   };
   const openEdit = (f: AdminFood) => {
@@ -772,6 +776,7 @@ function FoodsTab({ showToast }: { showToast: (msg: string, type?: "success" | "
       image_url: f.image_url ?? "",
       recipe_link: f.recipe_link ?? ""
     });
+    setIngs(f.ingredients.length ? f.ingredients.map((i) => ({ ...i })) : [{ ...EMPTY_FOOD_ING }]);
     setEditing(f.slug);
   };
 
@@ -786,7 +791,10 @@ function FoodsTab({ showToast }: { showToast: (msg: string, type?: "success" | "
       description: form.description.trim() || null,
       region: form.region.trim() || null,
       image_url: form.image_url.trim() || null,
-      recipe_link: form.recipe_link.trim() || null
+      recipe_link: form.recipe_link.trim() || null,
+      ingredients: ings
+        .map((i) => ({ name: i.name.trim(), quantity_note: (i.quantity_note ?? "").trim() || null }))
+        .filter((i) => i.name)
     };
     try {
       if (editing === "new") {
@@ -860,6 +868,43 @@ function FoodsTab({ showToast }: { showToast: (msg: string, type?: "success" | "
               <span className="mb-1 block text-[var(--color-text-muted)]">Description</span>
               <textarea className={FIELD_CLS} rows={2} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
             </label>
+            <div className="text-sm sm:col-span-2">
+              <span className="mb-1 block text-[var(--color-text-muted)]">Ingredients</span>
+              <div className="space-y-2">
+                {ings.map((ing, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      className={`${FIELD_CLS_BASE} min-w-0 flex-1`}
+                      value={ing.name}
+                      placeholder="Ingredient, e.g. Egusi seeds"
+                      onChange={(e) => setIngs((list) => list.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
+                    />
+                    <input
+                      className={`${FIELD_CLS_BASE} w-28 shrink-0 sm:w-32`}
+                      value={ing.quantity_note ?? ""}
+                      placeholder="Amount"
+                      onChange={(e) => setIngs((list) => list.map((x, j) => (j === i ? { ...x, quantity_note: e.target.value } : x)))}
+                    />
+                    <button
+                      type="button"
+                      aria-label="Remove ingredient"
+                      onClick={() => setIngs((list) => (list.length === 1 ? [{ ...EMPTY_FOOD_ING }] : list.filter((_, j) => j !== i)))}
+                      className="shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-[var(--color-text-muted)] transition hover:text-[var(--color-error)]"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIngs((list) => [...list, { ...EMPTY_FOOD_ING }])}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
+              >
+                <Plus size={14} />
+                Add ingredient
+              </button>
+            </div>
           </div>
           {editing !== "new" && (
             <p className="text-xs text-[var(--color-text-muted)]">The URL slug stays fixed when you rename a food, so saved links keep working.</p>

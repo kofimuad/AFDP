@@ -626,6 +626,7 @@ export interface AdminFood {
   region: string | null
   image_url: string | null
   recipe_link: string | null
+  ingredients: SuggestionIngredient[]
   created_at: string | null
 }
 
@@ -635,6 +636,7 @@ export interface AdminFoodInput {
   region?: string | null
   image_url?: string | null
   recipe_link?: string | null
+  ingredients?: SuggestionIngredient[]
 }
 
 export const adminListFoods = async (params?: { q?: string; page?: number; page_size?: number }): Promise<AdminFood[]> => {
