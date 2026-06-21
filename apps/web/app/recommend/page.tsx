@@ -10,8 +10,10 @@ import { useToast } from "@/lib/store/toastStore";
 
 const EMPTY = { name: "", region: "", description: "", recipe_link: "", image_url: "", note: "" };
 const EMPTY_ING: SuggestionIngredient = { name: "", quantity_note: "" };
-const FIELD =
-  "w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
+// Base field styling without a width so it can be used inside flex rows too.
+const FIELD_BASE =
+  "rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
+const FIELD = `w-full ${FIELD_BASE}`;
 
 const REGIONS = [
   "West African",
@@ -150,13 +152,13 @@ function RecommendForm() {
           {ingredients.map((ing, i) => (
             <div key={i} className="flex items-center gap-2">
               <input
-                className={`${FIELD} flex-1`}
+                className={`${FIELD_BASE} min-w-0 flex-1`}
                 value={ing.name}
                 onChange={(e) => setIngredient(i, "name", e.target.value)}
                 placeholder="Ingredient, e.g. Egusi seeds"
               />
               <input
-                className={`${FIELD} w-32 shrink-0`}
+                className={`${FIELD_BASE} w-28 shrink-0 sm:w-32`}
                 value={ing.quantity_note ?? ""}
                 onChange={(e) => setIngredient(i, "quantity_note", e.target.value)}
                 placeholder="Amount"

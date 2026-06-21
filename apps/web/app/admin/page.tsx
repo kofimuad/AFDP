@@ -1082,7 +1082,7 @@ function SuggestionsTab({ showToast }: { showToast: (msg: string, type?: "succes
                               className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
                             >
                               <Pencil size={10} />
-                              {editId === s.id ? "Close" : "Edit"}
+                              {editId === s.id ? "Close" : "Edit ingredients"}
                             </button>
                           )}
                         </div>
