@@ -45,6 +45,60 @@ def create_refresh_token(data: dict[str, Any]) -> str:
     }
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
+def create_password_reset_token(user_id: str, password_hash: str) -> str:
+    """Create a short-lived, single-use password-reset token.
+
+    The token is signed with the app secret combined with the user's current
+    password hash. Once the password changes the hash changes, so any
+    previously issued reset token stops verifying — making it single-use and
+    self-invalidating without needing a database table.
+    """
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": user_id,
+        "type": "password_reset",
+        "exp": now + timedelta(minutes=settings.password_reset_token_expire_minutes),
+    }
+    secret = settings.jwt_secret_key + password_hash
+    return jwt.encode(payload, secret, algorithm=settings.jwt_algorithm)
+
+
+def read_unverified_subject(token: str) -> str | None:
+    """Return the ``sub`` claim of a token without verifying its signature.
+
+    Needed before verification because the per-user signing secret can only be
+    rebuilt after looking up the user the token claims to belong to.
+    """
+    try:
+        claims = jwt.get_unverified_claims(token)
+    except JWTError:
+        return None
+    sub = claims.get("sub")
+    return str(sub) if sub else None
+
+
+def verify_password_reset_token(token: str, password_hash: str) -> str:
+    """Verify a password-reset token against the user's current password hash.
+
+    Returns the user id on success; raises 400 if the token is invalid,
+    expired, of the wrong type, or already consumed (password changed).
+    """
+    settings = get_settings()
+    secret = settings.jwt_secret_key + password_hash
+    invalid = HTTPException(status_code=400, detail="Invalid or expired reset token")
+    try:
+        claims = jwt.decode(token, secret, algorithms=[settings.jwt_algorithm])
+    except (ExpiredSignatureError, JWTError) as exc:
+        raise invalid from exc
+    if claims.get("type") != "password_reset":
+        raise invalid
+    sub = claims.get("sub")
+    if not sub:
+        raise invalid
+    return str(sub)
+
+
 def decode_token(token: str) -> dict[str, Any]:
     """Decode and validate a JWT token, raising 401 on failure."""
     settings = get_settings()

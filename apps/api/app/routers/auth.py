@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 import asyncpg
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
+from app.core.config import get_settings
 from app.core.database import execute, fetchrow
 from app.services.cloudinary_service import upload_image
 from app.schemas.auth import (
+    ForgotPasswordRequest,
     LocationUpdateRequest,
     LoginRequest,
     PasswordChangeRequest,
     RefreshRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UserRegisterRequest,
     UserResponse,
@@ -23,13 +27,19 @@ from app.schemas.auth import (
 from app.schemas.vendor import VendorRegisterIn
 from app.services.auth_service import (
     create_access_token,
+    create_password_reset_token,
     create_refresh_token,
     decode_token,
     get_current_user,
     hash_password,
+    read_unverified_subject,
     verify_password,
+    verify_password_reset_token,
 )
+from app.services.email_service import send_password_reset_email
 from app.services.vendor_service import register_vendor
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -134,6 +144,64 @@ async def login_user(payload: LoginRequest) -> TokenResponse:
     access = create_access_token({"sub": str(user["id"]), "email": user["email"], "role": user["role"]})
     refresh = create_refresh_token({"sub": str(user["id"])})
     return TokenResponse(access_token=access, refresh_token=refresh, user=_to_user_response(user))
+
+@router.post("/forgot-password")
+async def forgot_password(payload: ForgotPasswordRequest) -> dict[str, str]:
+    """Begin password recovery by emailing a signed reset link.
+
+    Always returns the same generic message so the endpoint can't be used to
+    discover which emails have accounts.
+    """
+    generic = {
+        "message": "If an account exists for that email, a reset link has been sent."
+    }
+
+    user = await _get_user_by_email(payload.email)
+    if not user or not user["is_active"]:
+        return generic
+
+    token = create_password_reset_token(str(user["id"]), user["hashed_password"])
+    reset_url = f"{get_settings().frontend_base_url}/auth/reset?token={token}"
+    try:
+        await send_password_reset_email(user["email"], reset_url)
+    except Exception:
+        # Never leak delivery failures (or account existence) to the caller.
+        logger.exception("Failed to send password reset email")
+
+    return generic
+
+
+@router.post("/reset-password")
+async def reset_password(payload: ResetPasswordRequest) -> dict[str, str]:
+    """Complete password recovery using the signed token from the reset email."""
+    invalid = HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    sub = read_unverified_subject(payload.token)
+    if not sub:
+        raise invalid
+    try:
+        user_id = UUID(sub)
+    except ValueError as exc:
+        raise invalid from exc
+
+    user = await fetchrow(
+        "SELECT id, hashed_password, is_active FROM users WHERE id = $1;",
+        user_id,
+    )
+    if not user or not user["is_active"]:
+        raise invalid
+
+    # Verifying against the current hash also enforces single use: once the
+    # password changes the token no longer validates.
+    verify_password_reset_token(payload.token, user["hashed_password"])
+
+    await execute(
+        "UPDATE users SET hashed_password = $1 WHERE id = $2;",
+        hash_password(payload.new_password),
+        user_id,
+    )
+    return {"message": "Password has been reset"}
+
 
 @router.post("/refresh")
 async def refresh_token(payload: RefreshRequest) -> dict[str, str]:
