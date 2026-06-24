@@ -33,6 +33,18 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_days: int = Field(
         default=7, env="JWT_REFRESH_TOKEN_EXPIRE_DAYS"
     )
+    password_reset_token_expire_minutes: int = Field(
+        default=60, env="PASSWORD_RESET_TOKEN_EXPIRE_MINUTES"
+    )
+
+    # Transactional email (password reset, etc.). When resend_api_key is empty
+    # the email service falls back to logging messages instead of sending them,
+    # so flows remain testable in development without a provider.
+    resend_api_key: str = ""
+    email_from: str = "AFDP <onboarding@resend.dev>"
+
+    # Public base URL of the web app, used to build links inside emails.
+    frontend_base_url: str = "http://localhost:3000"
 
     mapbox_access_token: str = ""
     neon_database_url: str = ""

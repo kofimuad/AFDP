@@ -11,7 +11,7 @@ import { Input, FormField } from "@/components/ui/input";
 import { Logo } from "@/components/ui/Logo";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useToast } from "@/lib/store/toastStore";
-import { registerUser, loginUser, getMe } from "@/lib/api";
+import { registerUser, loginUser, getMe, requestPasswordReset } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 // ── Types ────────────────────────────────────────────────────
@@ -112,6 +112,116 @@ function RoleCard({
   );
 }
 
+// ── Forgot-password view ─────────────────────────────────────
+
+function ForgotPasswordView({ onBack }: { onBack: () => void }) {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+
+    if (!email.trim()) {
+      setError("Please enter your email address.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await requestPasswordReset(email.trim());
+      // The API returns a generic message regardless of whether the account
+      // exists, so we always show the same confirmation.
+      setSent(true);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="w-full max-w-[380px]">
+      <div className="mb-6 flex justify-start lg:hidden">
+        <Logo variant="dark" />
+      </div>
+
+      <h1 className="display-font text-2xl font-bold text-[var(--color-text-primary)]">
+        Reset your password
+      </h1>
+      <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+        Enter your email and we&apos;ll send you a link to reset your password.
+      </p>
+
+      {sent ? (
+        <div className="mt-6 flex flex-col gap-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-5 text-sm text-[var(--color-text-primary)]">
+            If an account exists for <strong>{email.trim()}</strong>, a password
+            reset link is on its way. Check your inbox (and spam folder).
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className="w-full rounded-full"
+            onClick={onBack}
+          >
+            Back to sign in
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} noValidate className="mt-6 flex flex-col gap-4">
+          <FormField label="Email address" htmlFor="forgot-email" required>
+            <Input
+              id="forgot-email"
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              iconLeft={<AtSign size={16} />}
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError(null);
+              }}
+              required
+            />
+          </FormField>
+
+          {error && (
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-[var(--radius-md)] border border-[var(--color-error-light)] bg-[var(--color-error-light)] px-3 py-2.5 text-sm text-[var(--color-error)]"
+            >
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            loading={loading}
+            className="w-full rounded-full"
+          >
+            Send reset link
+          </Button>
+
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-center text-sm text-[var(--color-text-muted)] transition hover:text-[var(--color-text-primary)]"
+          >
+            ← Back to sign in
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────
 
 export default function AuthPage() {
@@ -120,6 +230,7 @@ export default function AuthPage() {
   const { showToast } = useToast();
 
   const [tab, setTab] = useState<Tab>("signin");
+  const [mode, setMode] = useState<"auth" | "forgot">("auth");
   const [form, setForm] = useState<FormState>(EMPTY);
   const [selectedRole, setSelectedRole] = useState<Role>("user");
   const [showPw, setShowPw] = useState(false);
@@ -254,6 +365,9 @@ export default function AuthPage() {
 
       {/* ── Right: form panel ── */}
       <div className="flex flex-1 flex-col items-center justify-center bg-[var(--color-bg)] px-6 py-10 lg:max-w-[480px]">
+        {mode === "forgot" ? (
+          <ForgotPasswordView onBack={() => setMode("auth")} />
+        ) : (
         <div className="w-full max-w-[380px]">
 
           {/* Logo (visible on mobile only) */}
@@ -384,7 +498,7 @@ export default function AuthPage() {
               <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={() => showToast("Password reset coming soon", "info")}
+                  onClick={() => setMode("forgot")}
                   className="text-xs font-medium text-[var(--color-primary)] transition hover:underline"
                 >
                   Forgot password?
@@ -479,6 +593,7 @@ export default function AuthPage() {
           </div>
 
         </div>
+        )}
       </div>
     </div>
   );

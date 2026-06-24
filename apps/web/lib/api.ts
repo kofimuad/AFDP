@@ -182,6 +182,19 @@ export const changePassword = async (data: {
   await api.post('/auth/me/password', data)
 }
 
+export const requestPasswordReset = async (email: string): Promise<{ message: string }> => {
+  const res = await api.post<{ message: string }>('/auth/forgot-password', { email })
+  return res.data
+}
+
+export const resetPassword = async (data: {
+  token: string
+  new_password: string
+}): Promise<{ message: string }> => {
+  const res = await api.post<{ message: string }>('/auth/reset-password', data)
+  return res.data
+}
+
 export const setMyLocation = async (lat: number, lng: number): Promise<MeResponse> => {
   const res = await api.put<MeResponse>('/auth/me/location', { lat, lng })
   return res.data
