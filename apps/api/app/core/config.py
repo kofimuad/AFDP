@@ -37,11 +37,19 @@ class Settings(BaseSettings):
         default=60, env="PASSWORD_RESET_TOKEN_EXPIRE_MINUTES"
     )
 
-    # Transactional email (password reset, etc.). When resend_api_key is empty
-    # the email service falls back to logging messages instead of sending them,
-    # so flows remain testable in development without a provider.
-    resend_api_key: str = ""
-    email_from: str = "AFDP <onboarding@resend.dev>"
+    # Transactional email (password reset, etc.) over SMTP — e.g. Gmail.
+    # When smtp_user/smtp_password are empty the email service falls back to
+    # logging messages instead of sending them, so flows remain testable in
+    # development without a provider.
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    # Use STARTTLS (port 587). Set False to use implicit SSL (port 465).
+    smtp_starttls: bool = True
+    # From header; defaults to smtp_user when empty. For Gmail this must be the
+    # authenticated account (Gmail rewrites mismatched From addresses).
+    email_from: str = ""
 
     # Public base URL of the web app, used to build links inside emails.
     frontend_base_url: str = "http://localhost:3000"
